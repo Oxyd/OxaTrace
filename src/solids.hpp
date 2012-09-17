@@ -5,8 +5,11 @@
 
 #include <stdexcept>
 #include <tuple>
+#include <memory>
 
 namespace oxatrace {
+
+// Shapes ----------------------------------------------------------------------
 
 // Shape defines the set of points occupied by a solid, or a part thereof 
 // (e.g. when used in conjunction with CSG). This set is defined implicitly,
@@ -20,14 +23,14 @@ struct shape {
   // Returns:
   //   -- nonzero vector: Intersection coordinates,
   //   -- zero vector:    No intersection with the ray.
-  virtual auto intersect(ray r) const noexcept -> vector3;
+  virtual auto intersect(ray const& r) const -> vector3;
 
   // Given a ray, get the two intersection points closest to the ray origin.
   // Returns:
   //   -- (nonzero, nonzero): Two intersection points,
   //   -- (nonzero, zero):    Ray is tangent to the shape.
   //   -- (zero, zero):       No intersection.
-  virtual auto intersect_both(ray r) const noexcept -> both_intersections = 0;
+  virtual auto intersect_both(ray const& r) const -> both_intersections = 0;
 
   // Given a point on the shape, return the normal vector at that point.
   // Throws:
@@ -45,9 +48,7 @@ public:
     if (radius <= 0.0) throw std::logic_error("sphere: radius <= 0.0");
   }
 
-  virtual auto intersect_both(ray r) const noexcept override 
-                                     -> both_intersections;
-
+  virtual auto intersect_both(ray const& r) const override -> both_intersections;
   virtual auto normal_at(vector3 point) const override -> unit<vector3>;
 
 private:
@@ -55,8 +56,22 @@ private:
   double  radius_;
 };
 
+// Renderable solids -----------------------------------------------------------
+
+// Solid is a renderable entity. It can be intersected with a ray, and has 
+// various attributes associated with it, such as colour, material or texture.
+class solid {
+public:
+  // Construct a solid of a given shape.
+  explicit solid(std::shared_ptr<oxatrace::shape> const& s);
+
+  // Access to this solid's shape.
+  auto shape() const noexcept -> oxatrace::shape const&;
+
+private:
+  std::shared_ptr<oxatrace::shape> shape_;
+};
+
 }
 
 #endif
-
-// vim:colorcolumn=80

@@ -3,8 +3,11 @@
 
 #include <Eigen/Core>
 
+#include <boost/operators.hpp>
+
 #include <stdexcept>
 #include <algorithm>
+#include <utility>
 
 namespace oxatrace {
 
@@ -17,7 +20,7 @@ using vector4 = Eigen::Vector4d;
 
 // Unit-length vectors are those with .norm() == 1.0. They must be non-zero.
 template <typename Vector>
-class unit {
+class unit : boost::equality_comparable<unit<Vector>, Vector> {
 public:
   // Construction...
   unit(Vector v)
@@ -54,6 +57,12 @@ private:
   }
 };
 
+// Comparison of unit<Vector> with Vector.
+template <typename Vector>
+bool operator == (unit<Vector> const& u, Vector const& v) {
+  return u.get() == v;
+}
+
 // A ray is defined by its origin and direction. Rays are immutable.
 class ray {
 public:
@@ -75,13 +84,6 @@ private:
 // Throws:
 //   -- std::logic_error: When t is negative.
 auto point_at(ray r, double t) -> vector3;
-
-// Describes a ray/solid intersection.
-struct intersection {
-  vector3 const       position; // Intersection in global coordinates.
-  unit<vector3> const normal;   // Normal to the surface at the point of 
-                                // intersection.
-};
 
 }
 

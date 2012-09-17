@@ -45,7 +45,7 @@ Default('oxatrace')
 ## Unit tests
 ##
 
-tests = ['math_test', 'solids_test']
+tests = ['math_test', 'solids_test', 'scene_test']
 
 import subprocess
 testsEnv = env.Clone()
@@ -71,5 +71,3 @@ for test in tests:
   Alias(test, stamp)
 
 Alias('tests', tests)
-
-# vim:colorcolumn=80

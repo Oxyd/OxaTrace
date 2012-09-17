@@ -3,14 +3,15 @@
 #include <cmath>
 #include <algorithm>
 #include <tuple>
+#include <utility>
 
 namespace oxatrace {
 
-auto shape::intersect(ray r) const noexcept -> vector3 {
+auto shape::intersect(ray const& r) const -> vector3 {
   return std::get<0>(intersect_both(r));
 }
 
-auto sphere::intersect_both(ray r) const noexcept -> both_intersections {
+auto sphere::intersect_both(ray const& r) const -> both_intersections {
   // Let c denote the centre and r the radius. This sphere is defined by the
   // equation ‖x - c‖ = r. Let o := r.origin(), d:= r.direction(), the ray is 
   // then described as x = o + td, (∀t > 0).
@@ -78,6 +79,11 @@ auto sphere::normal_at(vector3 point) const -> unit<vector3> {
   return unit<vector3>(point - center_);
 }
 
+solid::solid(std::shared_ptr<oxatrace::shape> const& s)
+  : shape_(std::move(s)) { }
+
+auto solid::shape() const noexcept -> oxatrace::shape const& {
+  return *shape_;
 }
 
-// vim:colorcolumn=80
+}
