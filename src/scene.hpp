@@ -14,7 +14,7 @@ namespace oxatrace {
 // Scene definition is a mutable container of objects and lights. It can then
 // be turned into a scene which can be rendered.
 class scene_definition {
-  using solid_list     = std::vector<solid>;
+  using solid_list = std::vector<solid>;
 
 public:
   using solid_iterator = solid_list::const_iterator;

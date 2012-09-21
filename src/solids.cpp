@@ -76,11 +76,11 @@ auto sphere::intersect_both(ray const& r) const -> both_intersections {
 }
 
 auto sphere::normal_at(vector3 point) const -> unit<vector3> {
-  return unit<vector3>(point - center_);
+  return {point - center_};
 }
 
 solid::solid(std::shared_ptr<oxatrace::shape> const& s)
-  : shape_(std::move(s)) { }
+  : shape_{std::move(s)} { }
 
 auto solid::shape() const noexcept -> oxatrace::shape const& {
   return *shape_;

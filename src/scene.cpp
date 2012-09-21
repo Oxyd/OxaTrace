@@ -17,8 +17,8 @@ auto scene_definition::solids_end() const noexcept -> solid_iterator {
 }
 
 scene::intersection::intersection(vector3 pos, oxatrace::solid s)
-  : position_(std::move(pos))
-  , solid_(std::move(s)) { }
+  : position_{std::move(pos)}
+  , solid_{std::move(s)} { }
 
 auto scene::intersection::normal() const -> unit<vector3> {
   if (!normal_)
@@ -34,13 +34,13 @@ auto simple_scene::intersect_solid(ray const& r) const
   -> boost::optional<intersection>
 {
   boost::optional<intersection> result;
-  double min_distance_sq = std::numeric_limits<double>::max();
+  double min_distance_sq{std::numeric_limits<double>::max()};
 
   for (solid const& s : definition_.solids()) {
-    vector3 const i = s.shape().intersect(r);
+    vector3 const i{s.shape().intersect(r)};
 
     if (!i.isZero()) {
-      double const dist_sq = (i - r.origin()).squaredNorm();
+      double const dist_sq{(i - r.origin()).squaredNorm()};
       if (dist_sq < min_distance_sq) {
         min_distance_sq = dist_sq;
         result = scene::intersection(i, s);
@@ -52,7 +52,7 @@ auto simple_scene::intersect_solid(ray const& r) const
 }
 
 simple_scene::simple_scene(scene_definition def)
-  : definition_(def) { }
+  : definition_{def} { }
 
 } // namespace oxatrace
 

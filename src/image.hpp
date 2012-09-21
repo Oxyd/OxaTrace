@@ -5,6 +5,8 @@
 
 #include <tuple>
 #include <vector>
+#include <cstddef>
+#include <array>
 
 namespace oxatrace {
 
@@ -15,7 +17,7 @@ class channel
   , boost::less_than_comparable<channel>> {
 public:
   // Construction...
-  explicit channel(double value = 0.0);
+  channel(double value = 0.0);
 
   // Modifiers...
   auto operator = (double d) -> channel&;
@@ -89,6 +91,52 @@ private:
   channel_list channels_;
 };
 
+// Image is a 2D array of colours. The particular meaning of the channels'
+// values is still unspecified at this point.
+class image {
+  using pixel_list = std::vector<color>;
+
+public:
+  // Types...
+  using pixel_iterator = pixel_list::iterator;
+  using const_pixel_iterator = pixel_list::const_iterator;
+
+  // Construction...
+  // Create an image of given dimensions.
+  // Throws:
+  //   -- std::logic_error: Dimensions are invalid.
+  image(std::size_t width, std::size_t height);
+
+  // Observers...
+  auto width() const  -> std::size_t { return width_; }
+  auto height() const -> std::size_t { return pixels_.size() / width(); }
+
+  // Pixel access...
+  auto begin() -> pixel_iterator { return pixels_.begin(); }
+  auto end()   -> pixel_iterator { return pixels_.end(); }
+  auto begin() const -> const_pixel_iterator {
+    return pixels_.begin();
+  }
+  auto end() const -> const_pixel_iterator {
+    return pixels_.end();
+  }
+
+  // Get pixel at given coordinates.
+  // Throws:
+  //   -- std::logic_error: Coordinates out of bounds.
+  auto pixel_at(std::size_t x, std::size_t y) -> color&;
+  auto pixel_at(std::size_t x, std::size_t y) const -> color const&;
+
+private:
+  pixel_list  pixels_;
+  std::size_t width_;
+};
+
+// Save an image into a PNG file.
+// Throws:
+//   -- std::ios_base::failure: I/O error.
+void save(image const& image, std::string const& filename);
+ 
 } // namespace oxatrace
 
 #endif

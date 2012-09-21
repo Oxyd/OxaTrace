@@ -11,7 +11,7 @@
 
 namespace oxatrace {
 
-double const EPSILON{0.000001};
+constexpr double EPSILON{0.000001};
   
 // Vectors & Rays --------------------------------------------------------------
 
@@ -27,7 +27,7 @@ public:
     : v_{normalize(v)} { }
   
   unit(unit<Vector> const& other) noexcept
-    : v_(other.v_) { }
+    : v_{other.v_} { }
     
   // Modifiers...
   unit& operator = (Vector v) {

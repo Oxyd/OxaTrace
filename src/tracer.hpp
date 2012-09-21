@@ -9,4 +9,3 @@ namespace oxatrace {
 
 #endif
 
-// vim:textwidth=80:colorcolumn=80
