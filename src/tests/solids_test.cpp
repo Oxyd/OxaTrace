@@ -25,50 +25,50 @@ struct sphere_test : testing::Test {
 
 TEST_F(sphere_test, hit_test) {
   auto const s1_intersections = s1.intersect_both(s1_hit);
-  EXPECT_FALSE(std::get<0>(s1_intersections).isZero());
-  EXPECT_FALSE(std::get<1>(s1_intersections).isZero());
+  EXPECT_FALSE(zero(std::get<0>(s1_intersections)));
+  EXPECT_FALSE(zero(std::get<1>(s1_intersections)));
 
   auto const s2_intersections = s2.intersect_both(s2_hit);
-  EXPECT_FALSE(std::get<0>(s2_intersections).isZero());
-  EXPECT_FALSE(std::get<1>(s2_intersections).isZero());
+  EXPECT_FALSE(zero(std::get<0>(s2_intersections)));
+  EXPECT_FALSE(zero(std::get<1>(s2_intersections)));
 }
 
 TEST_F(sphere_test, inside_hit_test) {
   auto const s1_intersections = s1.intersect_both(s1_inside_hit);
-  EXPECT_FALSE(std::get<0>(s1_intersections).isZero());
-  EXPECT_TRUE(std::get<1>(s1_intersections).isZero());
+  EXPECT_FALSE(zero(std::get<0>(s1_intersections)));
+  EXPECT_TRUE(zero(std::get<1>(s1_intersections)));
 
   auto const s2_intersections = s2.intersect_both(s2_inside_hit);
-  EXPECT_FALSE(std::get<0>(s2_intersections).isZero());
-  EXPECT_TRUE(std::get<1>(s2_intersections).isZero());
+  EXPECT_FALSE(zero(std::get<0>(s2_intersections)));
+  EXPECT_TRUE(zero(std::get<1>(s2_intersections)));
 }
 
 TEST_F(sphere_test, miss_test) {
   auto const s1_intersections_1 = s1.intersect_both(s1_miss_1);
-  EXPECT_TRUE(std::get<0>(s1_intersections_1).isZero());
-  EXPECT_TRUE(std::get<1>(s1_intersections_1).isZero());
+  EXPECT_TRUE(zero(std::get<0>(s1_intersections_1)));
+  EXPECT_TRUE(zero(std::get<1>(s1_intersections_1)));
 
   auto const s1_intersections_2 = s1.intersect_both(s1_miss_2);
-  EXPECT_TRUE(std::get<0>(s1_intersections_2).isZero());
-  EXPECT_TRUE(std::get<1>(s1_intersections_2).isZero());
+  EXPECT_TRUE(zero(std::get<0>(s1_intersections_2)));
+  EXPECT_TRUE(zero(std::get<1>(s1_intersections_2)));
 
   auto const s2_intersections_1 = s2.intersect_both(s2_miss_1);
-  EXPECT_TRUE(std::get<0>(s2_intersections_1).isZero());
-  EXPECT_TRUE(std::get<1>(s2_intersections_1).isZero());
+  EXPECT_TRUE(zero(std::get<0>(s2_intersections_1)));
+  EXPECT_TRUE(zero(std::get<1>(s2_intersections_1)));
 
   auto const s2_intersections_2 = s2.intersect_both(s2_miss_2);
-  EXPECT_TRUE(std::get<0>(s2_intersections_2).isZero());
-  EXPECT_TRUE(std::get<1>(s2_intersections_2).isZero());
+  EXPECT_TRUE(zero(std::get<0>(s2_intersections_2)));
+  EXPECT_TRUE(zero(std::get<1>(s2_intersections_2)));
 }
 
 TEST_F(sphere_test, tangent_test) {
   auto const s1_intersections = s1.intersect_both(s1_tangent);
-  EXPECT_FALSE(std::get<0>(s1_intersections).isZero());
-  EXPECT_TRUE(std::get<1>(s1_intersections).isZero());
+  EXPECT_FALSE(zero(std::get<0>(s1_intersections)));
+  EXPECT_TRUE(zero(std::get<1>(s1_intersections)));
 
   auto const s2_intersections = s2.intersect_both(s2_tangent);
-  EXPECT_FALSE(std::get<0>(s2_intersections).isZero());
-  EXPECT_TRUE(std::get<1>(s2_intersections).isZero());
+  EXPECT_FALSE(zero(std::get<0>(s2_intersections)));
+  EXPECT_TRUE(zero(std::get<1>(s2_intersections)));
 }
 
 int main(int argc, char** argv) {

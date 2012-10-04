@@ -2,7 +2,7 @@
 ## Parameters
 ##
 
-debug = ARGUMENTS.get('debug', 0)
+mode = ARGUMENTS.get('mode', 'release')
 verbose = ARGUMENTS.get('verbose', 0)
 
 ##
@@ -14,8 +14,7 @@ defaultEnv.Append(CCFLAGS=[
   '-Wall', '-Wextra', '-std=c++11', '-pedantic', '-pthread'
 ])
 defaultEnv.Append(LINKFLAGS=['-pthread'])
-defaultEnv.Append(LIBS=['png'])
-defaultEnv.Append(CPPPATH=['./eigen'])
+defaultEnv.Append(LIBS=['png', 'm'])
 
 if not verbose:
   defaultEnv.Replace(CXXCOMSTR='Compiling $TARGET')
@@ -28,10 +27,21 @@ releaseEnv.Append(CPPFLAGS=['-DNDEBUG'])
 debugEnv = defaultEnv.Clone()
 debugEnv.Append(CCFLAGS=['-ggdb'])
 
-if debug:
-  env = debugEnv
-else:
-  env = releaseEnv
+profileEnv = releaseEnv.Clone()
+profileEnv.Append(CCFLAGS=['-ggdb'])
+
+environments = {
+  'release': releaseEnv,
+  'debug': debugEnv,
+  'profile': profileEnv
+}
+
+try:
+  env = environments[mode]
+except KeyError:
+  import sys
+  print >> sys.stderr, 'Unknown mode {0}'.format(mode)
+  Exit(1)
 
 ##
 ## Rules

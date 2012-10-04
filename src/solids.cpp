@@ -5,7 +5,7 @@
 #include <tuple>
 #include <utility>
 
-namespace oxatrace {
+using namespace oxatrace;
 
 auto shape::intersect(ray const& r) const -> vector3 {
   return std::get<0>(intersect_both(r));
@@ -29,8 +29,8 @@ auto sphere::intersect_both(ray const& r) const -> both_intersections {
   //           a² + 2t(ad) + t²d² = r²
   //    t²d² + t(2ad) + (a² - r²) = 0,
   //
-  //  a quadratic equation in t. (Here v², where v is a vector, is the scalar
-  //  product of v with itself.)
+  // a quadratic equation in t. (Here v², where v is a vector, is the scalar
+  // product of v with itself.)
   //
   // Solving the equation for t gives us the solutions
   //
@@ -44,30 +44,31 @@ auto sphere::intersect_both(ray const& r) const -> both_intersections {
   //              ___________________
   //     = -ad ± √(ad)² - d²(a² - r²)
   // 
-  // All real and positive t's are then the sought parameters of intersection
+  // All real and nonnegative t's are then the sought parameters of intersection
   // for the ray formula.
   
   vector3 const a    = r.origin() - center_;
-  double const  a_2  = a.squaredNorm();
-  double const  ad   = a.dot(r.direction().get());
+  double const  a_2  = norm_squared(a);
+  double const  ad   = dot(a, r.direction().get());
   double const  ad_2 = ad * ad;
-  double const  d_2  = r.direction().get().squaredNorm();
+  double const  d_2  = norm_squared(r.direction().get());
   double const  r_2  = radius_ * radius_;
 
   double const D = ad_2 - d_2 * (a_2 - r_2);
 
-  both_intersections result{vector3::Zero(), vector3::Zero()};
+  both_intersections result{vector3::zero(), vector3::zero()};
   if (D >= 0.0) {
     double const sqrt_D = std::sqrt(D);
     double t_1          = -ad + sqrt_D;
     double t_2          = -ad - sqrt_D;
 
+    // Only consider nonnegative values for t₁, t₂, and make t₁ ≤ t₂.
     if (t_1 > t_2) std::swap(t_1, t_2);
     if (t_1 < 0.0) t_1 = t_2;
 
     if (t_1 >= 0.0) {
       std::get<0>(result) = point_at(r, t_1);
-      if (t_2 - t_1 > EPSILON)
+      if (double_neq(t_1, t_2))
         std::get<1>(result) = point_at(r, t_2);
     }
   }
@@ -86,4 +87,3 @@ auto solid::shape() const noexcept -> oxatrace::shape const& {
   return *shape_;
 }
 
-}

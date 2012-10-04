@@ -98,18 +98,19 @@ class image {
 
 public:
   // Types...
-  using pixel_iterator = pixel_list::iterator;
-  using const_pixel_iterator = pixel_list::const_iterator;
+  using pixel_iterator        = pixel_list::iterator;
+  using const_pixel_iterator  = pixel_list::const_iterator;
+  using index                 = std::size_t;
 
   // Construction...
   // Create an image of given dimensions.
   // Throws:
   //   -- std::logic_error: Dimensions are invalid.
-  image(std::size_t width, std::size_t height);
+  image(index width, index height);
 
   // Observers...
-  auto width() const  -> std::size_t { return width_; }
-  auto height() const -> std::size_t { return pixels_.size() / width(); }
+  auto width() const  -> index { return width_; }
+  auto height() const -> index { return pixels_.size() / width(); }
 
   // Pixel access...
   auto begin() -> pixel_iterator { return pixels_.begin(); }
@@ -124,8 +125,8 @@ public:
   // Get pixel at given coordinates.
   // Throws:
   //   -- std::logic_error: Coordinates out of bounds.
-  auto pixel_at(std::size_t x, std::size_t y) -> color&;
-  auto pixel_at(std::size_t x, std::size_t y) const -> color const&;
+  auto pixel_at(index x, index y)       -> color&;
+  auto pixel_at(index x, index y) const -> color const&;
 
 private:
   pixel_list  pixels_;

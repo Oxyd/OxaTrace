@@ -39,8 +39,8 @@ auto simple_scene::intersect_solid(ray const& r) const
   for (solid const& s : definition_.solids()) {
     vector3 const i{s.shape().intersect(r)};
 
-    if (!i.isZero()) {
-      double const dist_sq{(i - r.origin()).squaredNorm()};
+    if (!zero(i)) {
+      double const dist_sq = norm_squared(i - r.origin());
       if (dist_sq < min_distance_sq) {
         min_distance_sq = dist_sq;
         result = scene::intersection(i, s);
