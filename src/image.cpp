@@ -9,79 +9,8 @@
 #include <boost/gil/extension/io/png_io.hpp>
 
 #include <algorithm>
-#include <functional>
 
-namespace oxatrace {
-
-// Clamp a value into an interval.
-static
-auto clamp(double x, double lower, double upper) -> double {
-  return std::max(std::min(x, upper), lower);
-}
-
-channel::channel(double value)
-  : value_{clamp(value, MIN, MAX)} { }
-
-auto channel::operator = (double d) -> channel& {
-  set(d);
-  return *this;
-}
-
-void channel::set(double value)     { value_ = clamp(value, MIN, MAX);}
-channel::operator double () const   { return get(); }
-auto channel::get() const -> double { return value_; }
-
-auto channel::operator += (channel other) -> channel& {
-  set(value_ + other.value_);
-  return *this;
-}
-
-auto channel::operator -= (channel other) -> channel& {
-  set(value_ - other.value_);
-  return *this;
-}
-
-auto channel::operator *= (channel other) -> channel& { 
-  set(value_ * other.value_);
-  return *this;
-}
-
-auto channel::operator /= (channel other) -> channel& {
-  set(value_ / other.value_);
-  return *this;
-}
-
-color::color() { }
-color::color(channel r, channel g, channel b)
-  : channels_{{r, g, b}} { }
-
-auto color::operator += (color other) -> color& {
-  r() += other.r();
-  g() += other.g();
-  b() += other.b();
-  return *this;
-}
-
-auto color::operator -= (color other) -> color& {
-  r() -= other.r();
-  g() -= other.g();
-  b() -= other.b();
-  return *this;
-}
-
-auto color::operator *= (color other) -> color& {
-  r() *= other.r();
-  g() *= other.g();
-  b() *= other.b();
-  return *this;
-}
-
-auto color::operator /= (color other) -> color& {
-  r() /= other.r();
-  g() /= other.g();
-  b() /= other.b();
-  return *this;
-}
+using namespace oxatrace;
 
 image::image(std::size_t w, std::size_t h)
   : pixels_{w * h}
@@ -98,7 +27,7 @@ auto image::pixel_at(std::size_t x, std::size_t y) const -> color const& {
     throw std::logic_error{"image::pixel_at: Invalid coordinates"};
 }
 
-void save(image const& image, std::string const& filename) {
+void oxatrace::save(image const& image, std::string const& filename) {
   // We're going to copy the image over into a new one that Boost.GIL can 
   // understand. We're then going to save the copy. It appears to be easier
   // this way than trying to force Boost.GIL to understand oxatrace::image...
@@ -124,4 +53,3 @@ void save(image const& image, std::string const& filename) {
   boost::gil::png_write_view(filename, view);
 }
 
-} // namespace oxatrace

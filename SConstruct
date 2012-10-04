@@ -55,7 +55,7 @@ Default('oxatrace')
 ## Unit tests
 ##
 
-tests = ['math_test', 'solids_test', 'scene_test', 'image_test']
+tests = ['math_test', 'solids_test', 'scene_test', 'image_test', 'color_test']
 
 import subprocess
 testsEnv = env.Clone()
