@@ -1,11 +1,12 @@
 #ifndef OXATRACE_SHAPES_HPP
 #define OXATRACE_SHAPES_HPP
 
+#include "color.hpp"
 #include "math.hpp"
 
+#include <memory>
 #include <stdexcept>
 #include <tuple>
-#include <memory>
 
 namespace oxatrace {
 
@@ -48,7 +49,8 @@ public:
     if (radius <= 0.0) throw std::logic_error("sphere: radius <= 0.0");
   }
 
-  virtual auto intersect_both(ray const& r) const override -> both_intersections;
+  virtual auto intersect_both(ray const& r) const override 
+    -> both_intersections;
   virtual auto normal_at(vector3 point) const override -> unit<vector3>;
 
 private:
@@ -65,13 +67,14 @@ public:
   // Construct a solid of a given shape.
   explicit solid(std::shared_ptr<oxatrace::shape> const& s);
 
-  // Access to this solid's shape.
   auto shape() const noexcept -> oxatrace::shape const&;
+  auto base_color() const noexcept -> color&;
 
 private:
   std::shared_ptr<oxatrace::shape> shape_;
+  color base_color_;
 };
 
-}
+}  // namespace oxatrace
 
 #endif
