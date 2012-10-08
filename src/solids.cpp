@@ -1,11 +1,21 @@
 #include "solids.hpp"
 
+#include "color.hpp"
+#include "lights.hpp"
+
 #include <cmath>
 #include <algorithm>
+#include <stdexcept>
 #include <tuple>
 #include <utility>
 
 using namespace oxatrace;
+
+sphere::sphere(vector3 center, double radius)
+  : center_{center}
+  , radius_{radius} { 
+  if (radius <= 0.0) throw std::logic_error("sphere: radius <= 0.0");
+}
 
 auto shape::intersect(ray const& r) const -> vector3 {
   return std::get<0>(intersect_both(r));
@@ -64,9 +74,9 @@ auto sphere::intersect_both(ray const& r) const -> both_intersections {
 
     // Only consider nonnegative values for t₁, t₂, and make t₁ ≤ t₂.
     if (t_1 > t_2) std::swap(t_1, t_2);
-    if (t_1 < 0.0) t_1 = t_2;
+    if (t_1 <= EPSILON) t_1 = t_2;
 
-    if (t_1 >= 0.0) {
+    if (t_1 > EPSILON) {  // t_1 == 0 means we started out on the shape.
       std::get<0>(result) = point_at(r, t_1);
       if (double_neq(t_1, t_2))
         std::get<1>(result) = point_at(r, t_2);
@@ -77,13 +87,69 @@ auto sphere::intersect_both(ray const& r) const -> both_intersections {
 }
 
 auto sphere::normal_at(vector3 point) const -> unit<vector3> {
-  return {point - center_};
+  return point - center_;
 }
 
-solid::solid(std::shared_ptr<oxatrace::shape> const& s)
-  : shape_{std::move(s)} { }
+material::material(color const& ambient, double diffuse, double specular,
+                   unsigned specular_exponent)
+  : ambient_{ambient}
+  , diffuse_{diffuse}
+  , specular_{specular} 
+  , specular_exponent_{specular_exponent} { 
+  if (diffuse < 0.0 || diffuse > 1.0)
+    throw std::invalid_argument{"material: Invalid diffuse coefficient."};
+  if (specular < 0.0 || specular > 1.0)
+    throw std::invalid_argument{"material: Invalid specular coefficient."};
+}
+
+auto material::base_color() const -> color { return ambient_; }
+
+auto material::illuminate(
+  color const& base_color, unit<vector3> const& normal,
+  light const& light, unit<vector3> const& light_dir
+) const -> color {
+  // We're using the Phong shading model here, which is an empiric one without
+  // much basis in real physics. Aside from the ambient term (which is there
+  // to simulate background light which "just happens" in real life), we have
+  // the diffuse and specular terms. Each of these two is weighted by the
+  // two respective parameters of the constructor. The intensity of diffuse
+  // or specular highlight depends on how directly the light shines on the
+  // given surface -- in other words, the cosine of the angle between surface
+  // normal and the direction of the light source.
+  //
+  // Together, we have the formula for the intensity of one light source:
+  //
+  //                                 specular_exponent
+  //   I = diffuse ∙ x + specular ∙ x,
+  //
+  // Where x := max { N ∙ L, 0 }, N is the surface normal and L is the
+  // direction toward the light source. We need to clip x to be nonnegative
+  // here to avoid weird results when the angle between N and L is more than
+  // 90 degrees.
+  //
+  // To add colours into the mix, we then multiply the light's colour with
+  // its computed intensity.
+  //
+  // XXX: This should take distance to the light source into account as well.
+
+  double const x = std::max(dot(normal.get(), light_dir.get()), 0.0);
+  color const diffuse_color{light.color() * diffuse_ * x};
+  color const specular_color{
+    light.color() * specular_ * std::pow(x, specular_exponent_)
+  };
+
+  return base_color + diffuse_color + specular_color;
+}
+
+solid::solid(std::shared_ptr<oxatrace::shape> const& s, oxatrace::material mat)
+  : shape_{std::move(s)}
+  , material_{mat} { }
 
 auto solid::shape() const noexcept -> oxatrace::shape const& {
   return *shape_;
+}
+
+auto solid::material() const noexcept -> oxatrace::material const& {
+  return material_;
 }
 

@@ -10,6 +10,8 @@
 
 namespace oxatrace {
 
+class light;
+
 // Shapes ----------------------------------------------------------------------
 
 // Shape defines the set of points occupied by a solid, or a part thereof 
@@ -43,11 +45,7 @@ struct shape {
 class sphere final : public shape {
 public:
   // Throws std::logic_error if radius <= 0.0.
-  sphere(vector3 center, double radius)
-    : center_{center}
-    , radius_{radius} { 
-    if (radius <= 0.0) throw std::logic_error("sphere: radius <= 0.0");
-  }
+  sphere(vector3 center, double radius);
 
   virtual auto intersect_both(ray const& r) const override 
     -> both_intersections;
@@ -58,6 +56,48 @@ private:
   double  radius_;
 };
 
+// Materials -------------------------------------------------------------------
+
+// Material defines the various visual qualities of a solid. It is responsible
+// for giving rays their colour based on which light sources illuminate the
+// given solid at given point.
+class material {
+public:
+  // Create a Phong material.
+  // Throws:
+  //   -- std::invalid_argument: If diffuse or specular are outside the range
+  //                             [0, 1].
+  material(color const& ambient, double diffuse, double specular,
+           unsigned specular_exponent);
+
+  // Get the base colour of the material. This is the colour the object should
+  // have even if it is unaffected by any light source. In other words, the
+  // ambient colour.
+  auto base_color() const -> color;
+
+  // Given a light source directly visible from a given point, update the
+  // resulting ray colour accordingly. During ray tracing, call this function
+  // once for each directly visible light source for any given ray-solid 
+  // intersection.
+  //
+  // Parameters:
+  //   -- base_color: The ray colour computed so far.
+  //   -- normal:     Surface normal at the point of intersection.
+  //   -- light_dir:  Direction (in world coordinates) toward the source of
+  //                  light from the intersection point.
+  //   -- light:      The light illuminating the solid.
+  auto illuminate(
+    color const& base_color, unit<vector3> const& normal,
+    light const& light, unit<vector3> const& light_dir
+  ) const -> color;
+
+private:
+  color    ambient_;
+  double   diffuse_;
+  double   specular_;
+  unsigned specular_exponent_;
+};
+
 // Renderable solids -----------------------------------------------------------
 
 // Solid is a renderable entity. It can be intersected with a ray, and has 
@@ -65,14 +105,14 @@ private:
 class solid {
 public:
   // Construct a solid of a given shape.
-  explicit solid(std::shared_ptr<oxatrace::shape> const& s);
+  solid(std::shared_ptr<oxatrace::shape> const& s, material mat);
 
-  auto shape() const noexcept -> oxatrace::shape const&;
-  auto base_color() const noexcept -> color&;
+  auto shape() const noexcept    -> oxatrace::shape const&;
+  auto material() const noexcept -> oxatrace::material const&;
 
 private:
   std::shared_ptr<oxatrace::shape> shape_;
-  color base_color_;
+  oxatrace::material               material_;
 };
 
 }  // namespace oxatrace

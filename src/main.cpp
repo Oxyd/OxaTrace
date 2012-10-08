@@ -1,6 +1,7 @@
-#include "image.hpp"
-#include "scene.hpp"
 #include "camera.hpp"
+#include "image.hpp"
+#include "lights.hpp"
+#include "scene.hpp"
 
 #include <algorithm>
 #include <iostream>
@@ -13,7 +14,12 @@ auto main(int argc, char** argv) -> int {
 
     scene_definition def;
     def.add_solid(
-      solid{std::make_shared<sphere>(vector3{1.0, 1.0, -5.0}, 3.0)}
+      solid{std::make_shared<sphere>(vector3{1.0, 1.0, -5.0}, 3.0),
+            material{color{0.2, 0.2, 0.2}, 0.4, 0.8, 50}}
+    );
+    def.add_light(
+      std::make_shared<point_light>(vector3{-1.0, 3.0, 0.0},
+                                    color{1.0, 0.8, 0.8})
     );
 
     std::unique_ptr<scene> sc{simple_scene::make(std::move(def))};
@@ -27,10 +33,25 @@ auto main(int argc, char** argv) -> int {
         double const cam_v = double(y) / double(result.height());
 
         ray const r = cam.make_ray(cam_u, cam_v);
-        if (sc->intersect_solid(r))
-          result.pixel_at(x, y) = {1.0, 1.0, 1.0};
-        else
+
+        boost::optional<scene::intersection> i = sc->intersect_solid(r);
+        if (!i) {
           result.pixel_at(x, y) = {0.0, 0.0, 0.0};
+          continue;
+        }
+
+        color result_pixel{i->solid().material().base_color()};
+        for (light const& l : sc->lights()) {
+          vector3 const light_dir = l.get_source() - i->position();
+          if (sc->intersect_solid({i->position(), light_dir}))
+            continue;
+
+          result_pixel = i->solid().material().illuminate(
+            result_pixel, i->normal(), l, light_dir
+          );
+        }
+
+        result.pixel_at(x, y) = result_pixel;
       }
 
     save(result, filename);

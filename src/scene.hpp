@@ -32,7 +32,7 @@ public:
   auto solids_end() const noexcept   -> solid_iterator;
 
   auto lights_begin() const noexcept -> light_iterator;
-  auto lights_end() const noexcept -> light_iterator;
+  auto lights_end() const noexcept   -> light_iterator;
 
 private:
   solid_list solids_;
@@ -65,7 +65,7 @@ public:
   // intersection itself, and the solid intersected by the ray.
   class intersection {
   public:
-    intersection(vector3 pos, oxatrace::solid s);
+    intersection(vector3 const& pos, oxatrace::solid const& s);
 
     auto position() const -> vector3 { return position_; }
     auto solid() const -> oxatrace::solid const& { return solid_; }

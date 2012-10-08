@@ -15,8 +15,11 @@ struct scene_test : testing::Test {
 
   void SetUp() {
     scene_definition def;
-    def.add_solid(solid(std::make_shared<sphere>(vector3{0.0, 0.0, 0.0}, 2.0)));
-    def.add_solid(solid(std::make_shared<sphere>(vector3{5.0, 0.0, 0.0}, 2.0)));
+    material dummy{color{0.0, 0.0, 0.0}, 0.0, 0.0, 0};
+    def.add_solid(solid(std::make_shared<sphere>(vector3{0.0, 0.0, 0.0}, 2.0), 
+                        dummy));
+    def.add_solid(solid(std::make_shared<sphere>(vector3{5.0, 0.0, 0.0}, 2.0),
+                        dummy));
 
     scene = Scene::make(std::move(def));
   }

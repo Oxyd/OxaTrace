@@ -10,8 +10,8 @@ namespace oxatrace {
 // Channel is a double in the range [0, 1]; its values are automatically clamped
 // into this interval.
 class channel
-  : boost::field_operators<channel
-  , boost::less_than_comparable<channel>> {
+  : boost::field_operators<channel>
+  , boost::less_than_comparable<channel> {
 public:
   // Construction...
   channel(double value = 0.0);
@@ -44,7 +44,10 @@ auto operator < (channel lhs, channel rhs) -> bool {
 
 // Colour is three channels in one: red, green, and blue. The meaning of the
 // values of the channels is not pre-determined.
-class color : boost::field_operators<color> {
+class color 
+  : boost::field_operators<color>
+  , boost::multipliable<color, double>
+  , boost::dividable<color, double> {
   static constexpr std::size_t CHANNELS{3};
   using channel_list = std::array<channel, CHANNELS>;
   
@@ -83,6 +86,10 @@ public:
   auto operator -= (color other) -> color&;
   auto operator *= (color other) -> color&;
   auto operator /= (color other) -> color&;
+
+  // These multiply/divide each channel separately.
+  auto operator *= (double d) -> color&;
+  auto operator /= (double d) -> color&;
 
 private:
   channel_list channels_;

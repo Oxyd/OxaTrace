@@ -28,9 +28,9 @@ auto scene_definition::lights_end() const noexcept -> light_iterator {
   return lights_.end();
 }
 
-scene::intersection::intersection(vector3 pos, oxatrace::solid s)
-  : position_{std::move(pos)}
-  , solid_{std::move(s)} { }
+scene::intersection::intersection(vector3 const& pos, oxatrace::solid const& s)
+  : position_{pos}
+  , solid_{s} { }
 
 auto scene::intersection::normal() const -> unit<vector3> {
   if (!normal_)

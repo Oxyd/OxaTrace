@@ -15,7 +15,7 @@
 namespace oxatrace {
 
 constexpr double PI{3.141592};
-constexpr double EPSILON{0.000001};
+constexpr double EPSILON{1e-8};
 
 // Return true iff the two given doubles differ by less than EPSILON.
 inline auto double_eq(double a, double b) -> bool {

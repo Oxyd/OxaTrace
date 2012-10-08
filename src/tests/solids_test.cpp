@@ -19,8 +19,8 @@ struct sphere_test : testing::Test {
       s2_inside_hit{vector3{4.0, 3.0, -1.0}, vector3{2.0, -1.0, 8.0}},
       s2_miss_1{vector3{-4.0, 1.0, -8.0}, vector3{15.0, -20.0, 3.0}},
       s2_miss_2{s2_hit.origin(), unit<vector3>{-s2_hit.direction().get()}},
-      s2_tangent{vector3{5.0, 6.0, 1.0 + std::sqrt(5.0)},
-                 vector3{0.0, 1.0, 1.0 + 7.0 * std::sqrt(5.0)}};
+      s2_tangent{vector3{8.0, 2.0, -10.0},
+                 vector3{0.0, 0.0, 1.0}};
 };
 
 TEST_F(sphere_test, hit_test) {

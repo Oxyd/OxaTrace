@@ -74,3 +74,17 @@ auto color::operator /= (color other) -> color& {
   return *this;
 }
 
+auto color::operator *= (double d) -> color& {
+  r() *= d;
+  g() *= d;
+  b() *= d;
+  return *this;
+}
+
+auto color::operator /= (double d) -> color& {
+  r() /= d;
+  g() /= d;
+  b() /= d;
+  return *this;
+}
+
