@@ -13,9 +13,16 @@ auto main(int argc, char** argv) -> int {
     using namespace oxatrace;
 
     scene_definition def;
+#if 0
     def.add_solid(
       solid{std::make_shared<sphere>(vector3{1.0, 1.0, -5.0}, 3.0),
             material{color{0.2, 0.2, 0.2}, 0.4, 0.8, 50}}
+    );
+#endif
+    def.add_solid(
+      solid{std::make_shared<plane>(vector3{0.0, -2.0, 0.0},
+                                    vector3{0.0, -1.0, 0.0}),
+            material{color{0.6, 0.6, 0.6}, 0.5, 0.2, 200}}
     );
     def.add_light(
       std::make_shared<point_light>(vector3{-1.0, 3.0, 0.0},
@@ -23,7 +30,7 @@ auto main(int argc, char** argv) -> int {
     );
 
     std::unique_ptr<scene> sc{simple_scene::make(std::move(def))};
-    camera cam{{1.0, 1.0, 2.0}, {0.0, 0.0, -1.0}, {0.0, 1.0, 0.0},
+    camera cam{{1.0, 3.5, 5.0}, {0.0, -0.3, -1.0}, {0.0, 1.0, 0.0},
                640, 480, PI / 2.0};
 
     image result{640, 480};

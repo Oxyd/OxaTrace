@@ -11,48 +11,44 @@
 
 using namespace oxatrace;
 
-sphere::sphere(vector3 center, double radius)
+sphere::sphere(vector3 const& center, double radius)
   : center_{center}
   , radius_{radius} { 
   if (radius <= 0.0) throw std::logic_error("sphere: radius <= 0.0");
 }
 
-auto shape::intersect(ray const& r) const -> vector3 {
-  return std::get<0>(intersect_both(r));
-}
-
-auto sphere::intersect_both(ray const& r) const -> both_intersections {
+auto sphere::intersect(ray const& r) const -> intersection_list {
   // Let c denote the centre and r the radius. This sphere is defined by the
-  // equation ‖x - c‖ = r. Let o := r.origin(), d:= r.direction(), the ray is 
-  // then described as x = o + td, (∀t > 0).
+  // equation ||x - c|| = r. Let o := r.origin(), d:= r.direction(), the ray is 
+  // then described as x = o + td, (forall t > 0).
   //
   // Substituting the ray equation into the sphere definition gives
   //
-  //   ‖o + td - c‖ = r.
+  //   ||o + td - c|| = r.
   //
   // Define for simplicity a := o - c, Since both sides are non-negative and ‖.‖ 
   // denotes the Euclidian norm, we have
   //
-  //                     ‖a + td‖ = r
-  //                    ‖a + td‖² = r²
-  //                    (a + td)² = r²
-  //           a² + 2t(ad) + t²d² = r²
-  //    t²d² + t(2ad) + (a² - r²) = 0,
+  //                        ||a + td|| = r
+  //                      ||a + td||^2 = r^2
+  //                        (a + td)^2 = r^2
+  //            a^2 + 2t(ad) + t^2 d^2 = r^2
+  //    t^2 d^2 + t(2ad) + (a^2 - r^2) = 0,
   //
-  // a quadratic equation in t. (Here v², where v is a vector, is the scalar
+  // a quadratic equation in t. (Here v^2, where v is a vector, is the scalar
   // product of v with itself.)
   //
   // Solving the equation for t gives us the solutions
   //
-  //        1           ______________________
-  //   t = --- (-2ad ± √4(ad)² - 4(d²(a² - r²))
+  //        1           ___________________________
+  //   t = --- (-2ad ± √4(ad)^2 - 4(d^2 (a^2 - r^2))
   //        2
   //
-  //        1            ___________________
-  //     = --- (-2ad ± 2√(ad)² - d²(a² - r²))
+  //        1            ________________________
+  //     = --- (-2ad ± 2√(ad)^2 - d^2 (a^2 - r^2))
   //        2
-  //              ___________________
-  //     = -ad ± √(ad)² - d²(a² - r²)
+  //              ________________________
+  //     = -ad ± √(ad)^2 - d^2 (a^2 - r^2)
   // 
   // All real and nonnegative t's are then the sought parameters of intersection
   // for the ray formula.
@@ -63,31 +59,104 @@ auto sphere::intersect_both(ray const& r) const -> both_intersections {
   double const  ad_2 = ad * ad;
   double const  d_2  = norm_squared(r.direction().get());
   double const  r_2  = radius_ * radius_;
+  double const  D    = ad_2 - d_2 * (a_2 - r_2);
 
-  double const D = ad_2 - d_2 * (a_2 - r_2);
+  if (D < 0.0) return {};
 
-  both_intersections result{vector3::zero(), vector3::zero()};
-  if (D >= 0.0) {
-    double const sqrt_D = std::sqrt(D);
-    double t_1          = -ad + sqrt_D;
-    double t_2          = -ad - sqrt_D;
+  double const sqrt_D = std::sqrt(D);
+  double t_1          = -ad + sqrt_D;
+  double t_2          = -ad - sqrt_D;
 
-    // Only consider nonnegative values for t₁, t₂, and make t₁ ≤ t₂.
-    if (t_1 > t_2) std::swap(t_1, t_2);
-    if (t_1 <= EPSILON) t_1 = t_2;
+  // Only consider nonnegative values for t_1, t_2, and make t_1 <= t_2.
+  if (t_1 > t_2) std::swap(t_1, t_2);
+  if (t_1 <= EPSILON) t_1 = t_2;
+  if (t_1 <= EPSILON) return {};  // t_1 == 0 means we started out on the shape,
+                                  // so no intersection.
 
-    if (t_1 > EPSILON) {  // t_1 == 0 means we started out on the shape.
-      std::get<0>(result) = point_at(r, t_1);
-      if (double_neq(t_1, t_2))
-        std::get<1>(result) = point_at(r, t_2);
-    }
-  }
-
-  return result;
+  if (double_neq(t_1, t_2))
+    return {t_1, t_2};
+  else
+    return {t_1};
 }
 
-auto sphere::normal_at(vector3 point) const -> unit<vector3> {
-  return point - center_;
+auto sphere::normal_at(ray const& ray, double param) const -> unit<vector3> {
+  vector3 const point = point_at(ray, param);
+
+  // We have to decide the sign of the result based on whether the ray 
+  // originates within the sphere or outside it, so that a hit "straight on"
+  // the sphere (perpendicular to the surface) will always generate a normal
+  // vector that points directly toward the origin.
+  
+  if (norm_squared(ray.origin() - center_) > radius_ * radius_) // If outside
+    return point - center_;
+  else
+    return center_ - point;
+}
+
+plane::plane(vector3 const& point, vector3 const& u, vector3 const& v)
+try
+  : point_{point}
+  , normal_{cross(u, v)} { }
+catch (std::invalid_argument&) {
+  // This must have been thrown from unit<>'s constructor because normal_
+  // was initialized by a zero vector, which must be because u, v are colinear.
+  throw std::invalid_argument{"plane: u, v linearly dependent"};
+}
+
+plane::plane(vector3 const& point, unit<vector3> const& normal)
+  : point_{point}
+  , normal_{normal} { }
+
+auto plane::intersect(ray const& ray) const -> intersection_list {
+  // Our plane is defined by the equation
+  //
+  //   <x - P, N> = 0,
+  //
+  // P being the given point on the plane, N the normal. Setting 
+  // o := ray.origin(), d := ray.direction(), we can plug in the ray equation
+  // and obtain
+  //
+  //   <o + td - P, N> = 0.
+  //
+  // Let us set a := o - P, to simplify the equation into
+  //
+  //        <a + td, N> = 0
+  //   <a, N> + <td, N> = 0
+  //            t<d, N> = -<a, N>
+  //                       -<a, N>
+  //                  t = ---------.
+  //                        <d, N>
+  //
+
+  vector3 const a = ray.origin() - point_;
+  double const aN = dot(a, normal_.get());
+  double const dN = dot(ray.direction().get(), normal_.get());
+  double const t  = -aN / dN;
+
+  if (t > EPSILON)
+    return {t};
+  else
+    return {};
+}
+
+auto plane::normal_at(ray const& ray, double param) const -> unit<vector3> {
+  // We want to get the normal pointing into the half-space containing 
+  // ray.origin(). We have two half-spaces here, <x - P, N> < 0, and
+  // <x - P, N> > 0, and two possible answers: N and -N. We know that the answer
+  // N corresponds to the half-space <x - P, N> > 0 (the angle between the 
+  // normal and the vector x - P is less than 90 degrees if it lies within the
+  // normal vector's half-space).
+  //
+  // The question then is simple: Is <x - P, N> > 0? With x being the given
+  // point on ray.
+
+  vector3 const x{point_at(ray, param)};
+  double const  d{dot(x - point_, normal_.get())};
+
+  if (d >= 0.0)  // The case d == 0.0 should be handles *somehow* as well.
+    return normal_;
+  else
+    return -normal_.get();
 }
 
 material::material(color const& ambient, double diffuse, double specular,

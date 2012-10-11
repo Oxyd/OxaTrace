@@ -65,15 +65,16 @@ public:
   // intersection itself, and the solid intersected by the ray.
   class intersection {
   public:
-    intersection(vector3 const& pos, oxatrace::solid const& s);
+    intersection(ray const& ray, double param, oxatrace::solid const& s);
 
-    auto position() const -> vector3 { return position_; }
+    auto position() const -> vector3;
     auto solid() const -> oxatrace::solid const& { return solid_; }
     auto normal() const -> unit<vector3>;
 
   private:
-    vector3                                position_;
-    oxatrace::solid                        solid_;
+    ray             ray_;
+    double          param_;
+    oxatrace::solid solid_;
     mutable boost::optional<unit<vector3>> normal_;
   };
 

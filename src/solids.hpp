@@ -7,6 +7,7 @@
 #include <memory>
 #include <stdexcept>
 #include <tuple>
+#include <vector>
 
 namespace oxatrace {
 
@@ -18,42 +19,58 @@ class light;
 // (e.g. when used in conjunction with CSG). This set is defined implicitly,
 // using the intersect() member function.
 struct shape {
-  using both_intersections = std::tuple<vector3, vector3>;
+  // List of the parameters into the ray formula.
+  using intersection_list = std::vector<double>;
 
   virtual ~shape() noexcept { }
 
-  // Given a ray, get the intersection point closest to the ray origin.
-  // Returns:
-  //   -- nonzero vector: Intersection coordinates,
-  //   -- zero vector:    No intersection with the ray.
-  virtual auto intersect(ray const& r) const -> vector3;
+  // Given a ray, get all the intersection points of this shape with the given
+  // ray.
+  virtual auto intersect(ray const& r) const -> intersection_list = 0;
 
-  // Given a ray, get the two intersection points closest to the ray origin.
-  // Returns:
-  //   -- (nonzero, nonzero): Two intersection points,
-  //   -- (nonzero, zero):    Ray is tangent to the shape.
-  //   -- (zero, zero):       No intersection.
-  virtual auto intersect_both(ray const& r) const -> both_intersections = 0;
-
-  // Given a point on the shape, return the normal vector at that point.
-  // Throws:
-  //   -- std::logic_error: Point is not on the surface of the shape.
-  virtual auto normal_at(vector3 point) const -> unit<vector3> = 0;
+  // Given an intersection point, get the normal vector to this shape.
+  // Parameters:
+  //   -- ray: The ray that intersects this shape.
+  //   -- param: Parameter of the ray at which the intersection occurs.
+  virtual auto normal_at(ray const& ray, double parm) const 
+    -> unit<vector3> = 0;
 };
 
 // A sphere is defined by its centre point and radius.
 class sphere final : public shape {
 public:
   // Throws std::logic_error if radius <= 0.0.
-  sphere(vector3 center, double radius);
+  sphere(vector3 const& center, double radius);
 
-  virtual auto intersect_both(ray const& r) const override 
-    -> both_intersections;
-  virtual auto normal_at(vector3 point) const override -> unit<vector3>;
+  // Observers...
+  auto center() const -> vector3 { return center_; }
+  auto radius() const -> double  { return radius_; }
+
+  // shape functionality...
+  virtual auto intersect(ray const&) const override -> intersection_list;
+  virtual auto normal_at(ray const&, double) const override -> unit<vector3>;
 
 private:
   vector3 center_;
   double  radius_;
+};
+
+// Plane in the 3D space is an affine subspace of dimension 2.
+class plane final : public shape {
+public:
+  // Define a plane by a point on the plane, and two generators of the plane.
+  // Throws std::logic_error if u, v are linearly dependent.
+  plane(vector3 const& point, vector3 const& u, vector3 const& v);
+
+  // Define a plane by a point on the plane and a normal vector to the plane.
+  plane(vector3 const& point, unit<vector3> const& normal);
+
+  virtual auto intersect(ray const&) const override -> intersection_list;
+  virtual auto normal_at(ray const&, double) const override -> unit<vector3>;
+
+private:
+  vector3       point_;
+  unit<vector3> normal_;
 };
 
 // Materials -------------------------------------------------------------------
