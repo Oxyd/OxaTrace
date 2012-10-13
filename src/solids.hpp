@@ -65,6 +65,10 @@ public:
   // Define a plane by a point on the plane and a normal vector to the plane.
   plane(vector3 const& point, unit<vector3> const& normal);
 
+  // Observers...
+  auto point() const  -> vector3       { return point_; }
+  auto normal() const -> unit<vector3> { return normal_; }
+
   virtual auto intersect(ray const&) const override -> intersection_list;
   virtual auto normal_at(ray const&, double) const override -> unit<vector3>;
 

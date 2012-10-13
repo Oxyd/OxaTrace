@@ -40,6 +40,11 @@ auto operator << (std::ostream& out, sphere const& s) -> std::ostream& {
              << ", radius = " << s.radius() << "}";
 }
 
+auto operator << (std::ostream& out, plane const& p) -> std::ostream& {
+  return out << "plane{point = " << p.point()
+             << ", normal = " << p.normal().get() << "}";
+}
+
 auto operator << (std::ostream& out, ray const& r) -> std::ostream& {
   return out << "ray{origin = " << r.origin()
              << ", direction = " << r.direction().get() << "}";
@@ -47,6 +52,9 @@ auto operator << (std::ostream& out, ray const& r) -> std::ostream& {
 
 struct sphere_intersection_test 
   : testing::TestWithParam<std::tuple<sphere, ray, unsigned>> { };
+
+struct plane_intersection_test
+  : testing::TestWithParam<std::tuple<plane, ray, unsigned>> { };
 
 void normal_test(sphere const& sphere, ray const& ray, double param) {
   unit<vector3> const normal{sphere.normal_at(ray, param)};
@@ -62,20 +70,44 @@ void normal_test(sphere const& sphere, ray const& ray, double param) {
     EXPECT_EQ(normal.get(), unit<vector3>{-(point - sphere.center())}.get());
 }
 
-TEST_P(sphere_intersection_test, intersect_test) {
-  sphere const&  sphere        = std::get<0>(GetParam());
-  ray const      ray           = std::get<1>(GetParam());
-  unsigned const expected_hits = std::get<2>(GetParam());
+void normal_test(plane const& plane, ray const& ray, double param) {
+  unit<vector3> const normal{plane.normal_at(ray, param)};
+  vector3 const       point {point_at(ray, param)};
 
-  shape::intersection_list const intersections{sphere.intersect(ray)};
+  // We want the normal to point into the half-space the ray originated in.
+  // In other words, that the angle between (plane.point() - ray.origin) and
+  // normal be less than 90 degrees.
+
+  EXPECT_LT(dot(plane.point() - ray.origin(), normal.get()), PI);
+}
+
+template <typename Solid>
+void solid_intersection_test(Solid const& solid, ray const& ray,
+                             unsigned expected_hits) {
+  shape::intersection_list const intersections{solid.intersect(ray)};
   EXPECT_EQ(expected_hits, intersections.size());
 
   for (double param : intersections) {
     SCOPED_TRACE(std::string{"testing normal for param "} + 
                  std::to_string(param));
-
-    normal_test(sphere, ray, param);
+    normal_test(solid, ray, param);
   }
+}
+
+TEST_P(sphere_intersection_test, intersect_test) {
+  sphere const&  sphere        = std::get<0>(GetParam());
+  ray const      ray           = std::get<1>(GetParam());
+  unsigned const expected_hits = std::get<2>(GetParam());
+
+  solid_intersection_test(sphere, ray, expected_hits);
+}
+
+TEST_P(plane_intersection_test, intersect_test) {
+  plane const&   plane         = std::get<0>(GetParam());
+  ray const      ray           = std::get<1>(GetParam());
+  unsigned const expected_hits = std::get<2>(GetParam());
+
+  solid_intersection_test(plane, ray, expected_hits);
 }
 
 INSTANTIATE_TEST_CASE_P(
@@ -116,6 +148,25 @@ INSTANTIATE_TEST_CASE_P(
                     ray{vector3{8.0, 2.0, -10.0}, vector3{0.0, 0.0, 1.0}},
                     1)
   )
+);
+
+INSTANTIATE_TEST_CASE_P(
+  plane_tests,
+  plane_intersection_test,
+  testing::Values(
+    std::make_tuple(plane{vector3{0.0, 0.0, 0.0}, vector3::unit_y()},
+                    ray{vector3{0.0, 2.0, 0.0}, vector3{0.0, -1.0, 0.0}},
+                    1),
+    std::make_tuple(plane{vector3{0.0, 0.0, 0.0}, vector3::unit_y()},
+                    ray{vector3{0.0, 2.0, 0.0}, vector3{1.0, -1.0, 1.0}},
+                    1),
+    std::make_tuple(plane{vector3{0.0, 0.0, 0.0}, vector3::unit_y()},
+                    ray{vector3{0.0, -1.0, 2.0}, vector3{1.0, 1.0, 0.0}},
+                    1),
+    std::make_tuple(plane{vector3{0.0, 0.0, 0.0}, vector3::unit_y()},
+                    ray{vector3{1.0, 1.0, 1.0}, vector3{1.0, 0.0, 0.0}},
+                    0)
+    )
 );
 
 int main(int argc, char** argv) {
