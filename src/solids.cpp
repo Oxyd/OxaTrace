@@ -3,11 +3,14 @@
 #include "color.hpp"
 #include "lights.hpp"
 
+#include <cassert>
 #include <cmath>
 #include <algorithm>
 #include <stdexcept>
 #include <tuple>
 #include <utility>
+
+#include <iostream>
 
 using namespace oxatrace;
 
@@ -127,10 +130,25 @@ auto plane::intersect(ray const& ray) const -> intersection_list {
   //                  t = ---------.
   //                        <d, N>
   //
+  // The case when <d, N> = 0 corresponds to the situation where the ray is
+  // parallel with the plane. We have no intersection in that case.
+  //
+  // Also notable is the case of <a, N> = 0, or <o - P, N> = 0 which happens
+  // when the ray originates on the plane. Then two possibilities arise: 
+  // Either 1) the ray goes somewhere out of the plane, and its origin
+  // is the only common point with the plane; or 2) the ray is completely
+  // embedded in the plane. In both cases we're going to report that no
+  // intersection happens. In case 1) that is actually true (if we don't 
+  // consider ray.origin() to be a part of the ray), in case 2) it is very 
+  // false, but for ray tracing purposes it makes much more sense.
+  //
 
   vector3 const a = ray.origin() - point_;
   double const aN = dot(a, normal_.get());
   double const dN = dot(ray.direction().get(), normal_.get());
+
+  if (double_eq(dN, 0.0)) return {};  // Test for ray parallel to the plane.
+
   double const t  = -aN / dN;
 
   if (t > EPSILON)
@@ -139,21 +157,20 @@ auto plane::intersect(ray const& ray) const -> intersection_list {
     return {};
 }
 
-auto plane::normal_at(ray const& ray, double param) const -> unit<vector3> {
+auto plane::normal_at(ray const& ray, double) const -> unit<vector3> {
   // We want to get the normal pointing into the half-space containing 
-  // ray.origin(). We have two half-spaces here, <x - P, N> < 0, and
-  // <x - P, N> > 0, and two possible answers: N and -N. We know that the answer
-  // N corresponds to the half-space <x - P, N> > 0 (the angle between the 
+  // o := ray.origin(). We have two half-spaces here, <o - P, N> < 0, and
+  // <o - P, N> > 0, and two possible answers: N and -N. We know that the answer
+  // N corresponds to the half-space <o - P, N> > 0 (the angle between the 
   // normal and the vector x - P is less than 90 degrees if it lies within the
   // normal vector's half-space).
   //
-  // The question then is simple: Is <x - P, N> > 0? With x being the given
+  // The question then is simple: Is <o - P, N> > 0? With x being the given
   // point on ray.
 
-  vector3 const x{point_at(ray, param)};
-  double const  d{dot(x - point_, normal_.get())};
+  double const d{dot(normalize(ray.origin() - point_), normal_.get())};
 
-  if (d >= 0.0)  // The case d == 0.0 should be handles *somehow* as well.
+  if (d >= 0.0)  // The case d == 0.0 should be handled *somehow* as well.
     return normal_;
   else
     return -normal_.get();
@@ -188,23 +205,21 @@ auto material::illuminate(
   //
   // Together, we have the formula for the intensity of one light source:
   //
-  //                                 specular_exponent
-  //   I = diffuse ∙ x + specular ∙ x,
-  //
-  // Where x := max { N ∙ L, 0 }, N is the surface normal and L is the
-  // direction toward the light source. We need to clip x to be nonnegative
-  // here to avoid weird results when the angle between N and L is more than
-  // 90 degrees.
+  //                                                   specular_exponent
+  //   I = diffuse ∙ cos(alpha) + specular ∙ cos(alpha),
   //
   // To add colours into the mix, we then multiply the light's colour with
   // its computed intensity.
   //
   // XXX: This should take distance to the light source into account as well.
 
-  double const x = std::max(dot(normal.get(), light_dir.get()), 0.0);
-  color const diffuse_color{light.color() * diffuse_ * x};
+  double const cos_alpha = dot(normal.get(), light_dir.get());
+
+  assert(cos_alpha >= 0.0);
+
+  color const diffuse_color{light.color() * diffuse_ * cos_alpha};
   color const specular_color{
-    light.color() * specular_ * std::pow(x, specular_exponent_)
+    light.color() * specular_ * std::pow(cos_alpha, specular_exponent_)
   };
 
   return base_color + diffuse_color + specular_color;

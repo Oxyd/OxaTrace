@@ -75,10 +75,14 @@ void normal_test(plane const& plane, ray const& ray, double param) {
   vector3 const       point {point_at(ray, param)};
 
   // We want the normal to point into the half-space the ray originated in.
-  // In other words, that the angle between (plane.point() - ray.origin) and
-  // normal be less than 90 degrees.
+  // In other words, that the angle between (ray.origin - plane.point()) and
+  // normal be less than 90 degrees. In other words cos alpha has to be 
+  // in (0, 1].
 
-  EXPECT_LT(dot(plane.point() - ray.origin(), normal.get()), PI);
+  unit<vector3> const dir{ray.origin() - plane.point()};
+  double const cos_alpha = dot(dir.get(), normal.get());
+  EXPECT_LE(cos_alpha, 1) << dir.get() << " versus " << normal.get();
+  EXPECT_GT(cos_alpha, 0) << dir.get() << " versus " << normal.get();
 }
 
 template <typename Solid>
@@ -165,7 +169,10 @@ INSTANTIATE_TEST_CASE_P(
                     1),
     std::make_tuple(plane{vector3{0.0, 0.0, 0.0}, vector3::unit_y()},
                     ray{vector3{1.0, 1.0, 1.0}, vector3{1.0, 0.0, 0.0}},
-                    0)
+                    0),
+    std::make_tuple(plane{vector3{0.0, -2.0, 0.0}, vector3{0.0, -1.0, 0.0}},
+                    ray{vector3{-1.0, 3.0, 0.0}, vector3{-10.0, -2.0, -9.0}},
+                    1)
     )
 );
 

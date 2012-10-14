@@ -95,3 +95,5 @@ for test in tests:
   Alias(test, stamp)
 
 Alias('tests', tests)
+
+# vim:syntax=python
