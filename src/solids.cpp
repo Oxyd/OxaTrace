@@ -70,16 +70,21 @@ auto sphere::intersect(ray const& r) const -> intersection_list {
   double t_1          = -ad + sqrt_D;
   double t_2          = -ad - sqrt_D;
 
-  // Only consider nonnegative values for t_1, t_2, and make t_1 <= t_2.
+  // Sort t_1, t_2.
   if (t_1 > t_2) std::swap(t_1, t_2);
-  if (t_1 <= EPSILON) t_1 = t_2;
-  if (t_1 <= EPSILON) return {};  // t_1 == 0 means we started out on the shape,
-                                  // so no intersection.
+  assert(t_1 <= t_2);
 
-  if (double_neq(t_1, t_2))
-    return {t_1, t_2};
-  else
-    return {t_1};
+  if (D > EPSILON) {
+    // At most two solutions.
+    if (t_1 > EPSILON)      return {t_1, t_2};
+    else if (t_2 > EPSILON) return {t_2};
+    else                    return {};
+  } else {
+    // At most one solution.
+    if (t_1 > EPSILON) return {t_1};
+    else               return {};
+  }
+  // Case of D < 0.0 was already handled.
 }
 
 auto sphere::normal_at(ray const& ray, double param) const -> unit<vector3> {
@@ -206,7 +211,7 @@ auto material::illuminate(
   // Together, we have the formula for the intensity of one light source:
   //
   //                                                   specular_exponent
-  //   I = diffuse ∙ cos(alpha) + specular ∙ cos(alpha),
+  //   I = diffuse * cos(alpha) + specular * cos(alpha),
   //
   // To add colours into the mix, we then multiply the light's colour with
   // its computed intensity.
@@ -215,7 +220,7 @@ auto material::illuminate(
 
   double const cos_alpha = dot(normal.get(), light_dir.get());
 
-  assert(cos_alpha >= 0.0);
+  if (cos_alpha <= 0.0) return base_color;
 
   color const diffuse_color{light.color() * diffuse_ * cos_alpha};
   color const specular_color{

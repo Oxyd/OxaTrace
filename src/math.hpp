@@ -281,6 +281,13 @@ private:
   unit<vector3>  direction_;
 };
 
+inline 
+auto operator << (std::ostream& out, ray const& ray) -> std::ostream& {
+  return out << "ray{origin = " << ray.origin()
+             << ", direction = " << ray.direction().get()
+             << "}";
+}
+
 // Given a parametric ray r(t), compute r(t).
 // Throws:
 //   -- std::logic_error: When t is negative.

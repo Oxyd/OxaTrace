@@ -1,7 +1,10 @@
 #include "scene.hpp"
+
 #include <gtest/gtest.h>
+
 #include <memory>
 #include <ostream>
+#include <typeinfo>
 
 using namespace oxatrace;
 
@@ -19,6 +22,9 @@ struct scene_test : testing::Test {
     def.add_solid(solid(std::make_shared<sphere>(vector3{0.0, 0.0, 0.0}, 2.0), 
                         dummy));
     def.add_solid(solid(std::make_shared<sphere>(vector3{5.0, 0.0, 0.0}, 2.0),
+                        dummy));
+    def.add_solid(solid(std::make_shared<plane>(vector3{0.0, -2.0, 0.0},
+                                                vector3{0.0, 1.0, 0.0}),
                         dummy));
 
     scene = Scene::make(std::move(def));
@@ -65,6 +71,14 @@ TYPED_TEST(scene_test, miss_test) {
   boost::optional<scene::intersection> i = this->scene->intersect_solid(
     ray{vector3{-5.0, 4.0, 10.0},
         vector3{1.0, 0.0, 5.0}}
+  );
+
+  EXPECT_FALSE(i);
+}
+
+TYPED_TEST(scene_test, miss_test_2) {
+  boost::optional<scene::intersection> i = this->scene->intersect_solid(
+    ray{vector3{0.0, 2.0, 0.0}, vector3{-1.0, 1.0, -1.0}}
   );
 
   EXPECT_FALSE(i);

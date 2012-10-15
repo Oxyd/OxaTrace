@@ -7,6 +7,8 @@
 #include <cstddef>
 #include <iostream>
 
+#include <typeinfo>
+
 auto main(int argc, char** argv) -> int {
   if (argc != 2) {
     std::cerr << "Expected a filename, sorry.\n";
@@ -28,12 +30,12 @@ auto main(int argc, char** argv) -> int {
           material{color{0.6, 0.6, 0.6}, 0.5, 0.2, 200}}
   );
   def.add_light(
-    std::make_shared<point_light>(vector3{-1.0, 3.0, 0.0},
+    std::make_shared<point_light>(vector3{-1.0, 5.0, 5.0},
                                   color{1.0, 0.8, 0.8})
   );
 
   std::unique_ptr<scene> sc{simple_scene::make(std::move(def))};
-  camera cam{{1.0, 3.5, 5.0}, {0.0, -0.3, -0.7}, {0.0, 1.0, 0.0},
+  camera cam{{3.0, 3.5, 8.0}, {-0.4, -0.2, -1.0}, {0.0, 1.0, 0.0},
              640, 480, PI / 2.0};
 
   image result{640, 480};
@@ -53,17 +55,10 @@ auto main(int argc, char** argv) -> int {
       color result_pixel{i->solid().material().base_color()};
       for (light const& l : sc->lights()) {
         unit<vector3> const light_dir = {l.get_source() - i->position()};
-        if (sc->intersect_solid({i->position(), light_dir}))
-          continue;
-
-        if (dot(i->normal().get(), light_dir.get()) < 0.0) {
-          std::cerr << "i->normal = " << i->normal().get() << '\n'
-                    << "light_dir = " << light_dir.get() << '\n'
-                    << "l.get_source() = " << l.get_source() << '\n'
-                    << "i->position() = " << i->position() << '\n'
-                    << "l.get_source() - i->position = " << (l.get_source() - i->position()) << '\n';
-          assert(!"Now, die.");
-        }
+        if (auto obstacle = sc->intersect_solid({i->position(), light_dir}))
+          if (norm_squared(obstacle->position() - i->position()) <
+              norm_squared(l.get_source() - i->position()))
+            continue;
 
         result_pixel = i->solid().material().illuminate(
           result_pixel, i->normal(), l, light_dir

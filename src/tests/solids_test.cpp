@@ -2,7 +2,9 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <cmath>
+#include <iterator>
 #include <ostream>
 #include <tuple>
 
@@ -45,9 +47,16 @@ auto operator << (std::ostream& out, plane const& p) -> std::ostream& {
              << ", normal = " << p.normal().get() << "}";
 }
 
-auto operator << (std::ostream& out, ray const& r) -> std::ostream& {
-  return out << "ray{origin = " << r.origin()
-             << ", direction = " << r.direction().get() << "}";
+auto operator << (std::ostream& out, shape::intersection_list const& is)
+  -> std::ostream& {
+  if (is.empty()) return out << "{}";
+
+  out << "{" << is.front();
+  std::copy(
+    std::next(is.begin()), is.end(),
+    std::ostream_iterator<shape::intersection_list::value_type>(out, ", ")
+  );
+  return out << "}";
 }
 
 struct sphere_intersection_test 
@@ -89,12 +98,19 @@ template <typename Solid>
 void solid_intersection_test(Solid const& solid, ray const& ray,
                              unsigned expected_hits) {
   shape::intersection_list const intersections{solid.intersect(ray)};
-  EXPECT_EQ(expected_hits, intersections.size());
+  EXPECT_EQ(expected_hits, intersections.size())
+    << "params = " << intersections;
 
+  double min_dist = 0.0;
   for (double param : intersections) {
     SCOPED_TRACE(std::string{"testing normal for param "} + 
                  std::to_string(param));
     normal_test(solid, ray, param);
+
+    vector3 const point{point_at(ray, param)};
+    double const dist  {norm(ray.origin() - point)};
+    EXPECT_GT(dist, min_dist);
+    min_dist = dist;
   }
 }
 
@@ -135,6 +151,9 @@ INSTANTIATE_TEST_CASE_P(
                     ray{vector3{-3.0/2.0, -3.0/2.0, 5.0*std::sqrt(2.0)/2.0},
                         vector3{1.0, 1.0, -std::sqrt(2.0)}},
                     1),
+    std::make_tuple(sphere{vector3{0.0, 0.0, 0.0}, 1.0},
+                    ray{vector3{0.0, 5.0, 0.0}, vector3{0.0, -1.0, 0.0}},
+                    2),
 
     std::make_tuple(sphere{vector3{3.0, 2.0, 1.0}, 5.0},
                     ray{vector3{-4.0, 1.0, -8.0}, vector3{7.0, 1.0, 8.0}},

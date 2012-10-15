@@ -1,6 +1,8 @@
 #include "scene.hpp"
-#include <utility>
+
+#include <algorithm>
 #include <limits>
+#include <utility>
 
 using namespace oxatrace;
 
@@ -51,7 +53,7 @@ auto simple_scene::make(scene_definition def) -> std::unique_ptr<simple_scene> {
 auto simple_scene::intersect_solid(ray const& ray) const
   -> boost::optional<intersection> {
   boost::optional<intersection> result;
-  double min_distance_sq{std::numeric_limits<double>::max()};
+  double min_param{std::numeric_limits<double>::max()};
 
   for (auto iter = definition_.solids_begin(), end = definition_.solids_end();
        iter != end; ++iter) {
@@ -62,12 +64,12 @@ auto simple_scene::intersect_solid(ray const& ray) const
 
     // The ray does intersect this solid -- find out if it's the closest 
     // intersection.
-    
+
+    assert(std::is_sorted(intersections.begin(), intersections.end()));
     double const param = intersections.front();
-    vector3 const point{point_at(ray, param)};
-    double const dist_sq = norm_squared(point - ray.origin());
-    if (dist_sq < min_distance_sq) {
-      min_distance_sq = dist_sq;
+
+    if (param < min_param) {
+      min_param = param;
       result = scene::intersection(ray, param, solid);
     }
   }
