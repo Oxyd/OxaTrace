@@ -66,7 +66,7 @@ struct plane_intersection_test
   : testing::TestWithParam<std::tuple<plane, ray, unsigned>> { };
 
 void normal_test(sphere const& sphere, ray const& ray, double param) {
-  unit<vector3> const normal{sphere.normal_at(ray, param)};
+  unit<vector3> const normal{sphere.normal_at({ray, param})};
   vector3 const       point {point_at(ray, param)};
 
   // Does the ray originate inside the sphere? If so, we expect the normal to
@@ -80,7 +80,7 @@ void normal_test(sphere const& sphere, ray const& ray, double param) {
 }
 
 void normal_test(plane const& plane, ray const& ray, double param) {
-  unit<vector3> const normal{plane.normal_at(ray, param)};
+  unit<vector3> const normal{plane.normal_at({ray, param})};
   vector3 const       point {point_at(ray, param)};
 
   // We want the normal to point into the half-space the ray originated in.

@@ -30,19 +30,18 @@ auto scene_definition::lights_end() const noexcept -> light_iterator {
   return lights_.end();
 }
 
-scene::intersection::intersection(ray const& ray, double param, 
+scene::intersection::intersection(ray_point const& rp,
                                   oxatrace::solid const& s)
-  : ray_{ray}
-  , param_{param}
+  : ray_point_{rp}
   , solid_{s} { }
 
 auto scene::intersection::position() const -> vector3 {
-  return point_at(ray_, param_);
+  return ray_point_.point();
 }
 
 auto scene::intersection::normal() const -> unit<vector3> {
   if (!normal_)
-    normal_ = solid_.shape().normal_at(ray_, param_);
+    normal_ = solid_.shape().normal_at(ray_point_);
   return *normal_;
 }
 
@@ -70,7 +69,7 @@ auto simple_scene::intersect_solid(ray const& ray) const
 
     if (param < min_param) {
       min_param = param;
-      result = scene::intersection(ray, param, solid);
+      result = scene::intersection({ray, param}, solid);
     }
   }
 

@@ -2,6 +2,7 @@
 #define OXATRACE_MATH_HPP
 
 #include <boost/operators.hpp>
+#include <boost/optional.hpp>
 
 #include <algorithm>
 #include <array>
@@ -363,7 +364,7 @@ auto cos_angle_undir(
 class ray {
 public:
   // Construction...
-  ray(vector3 origin, unit<vector3> dir)
+  ray(vector3 const& origin, unit<vector3> const& dir)
     : origin_{origin}
     , direction_{dir} { }
 
@@ -376,20 +377,34 @@ private:
   unit<vector3>  direction_;
 };
 
-inline 
-auto operator << (std::ostream& out, ray const& ray) -> std::ostream& {
-  return out << "ray{origin = " << ray.origin()
-             << ", direction = " << ray.direction().get()
-             << "}";
-}
+auto operator << (std::ostream& out, ray const& ray) -> std::ostream&;
 
 // Given a parametric ray r(t), compute r(t).
 // Throws:
 //   -- std::logic_error: When t is negative.
-auto point_at(ray r, double t) -> vector3;
+auto point_at(ray const& r, double t) -> vector3;
 
-}
+// Contains both a ray and a point on this ray. The point is computed lazily
+// and cached to avoid its re-computation.
+class ray_point {
+public:
+  // Construction...
+  // Throws:
+  //   -- std::logic_error: When param is negative.
+  ray_point(oxatrace::ray const& ray, double param);
+
+  // Observers...
+  auto ray() const noexcept   -> oxatrace::ray { return ray_; }
+  auto param() const noexcept -> double        { return param_; }
+  auto point() const          -> vector3;
+
+private:
+  oxatrace::ray                    ray_;
+  double                           param_;
+  mutable boost::optional<vector3> point_;
+};
+
+}  // namespace oxatrace
 
 #endif
 
-// vim:colorcolumn=80

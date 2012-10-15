@@ -30,10 +30,9 @@ struct shape {
 
   // Given an intersection point, get the normal vector to this shape.
   // Parameters:
-  //   -- ray: The ray that intersects this shape.
-  //   -- param: Parameter of the ray at which the intersection occurs.
-  virtual auto normal_at(ray const& ray, double parm) const 
-    -> unit<vector3> = 0;
+  //   -- ray_point: The ray that intersected this solid along with the
+  //                 point of intersection.
+  virtual auto normal_at(ray_point const&) const -> unit<vector3> = 0;
 };
 
 // A sphere is defined by its centre point and radius.
@@ -48,7 +47,7 @@ public:
 
   // shape functionality...
   virtual auto intersect(ray const&) const override -> intersection_list;
-  virtual auto normal_at(ray const&, double) const override -> unit<vector3>;
+  virtual auto normal_at(ray_point const&) const override -> unit<vector3>;
 
 private:
   vector3 center_;
@@ -70,7 +69,7 @@ public:
   auto normal() const -> unit<vector3> { return normal_; }
 
   virtual auto intersect(ray const&) const override -> intersection_list;
-  virtual auto normal_at(ray const&, double) const override -> unit<vector3>;
+  virtual auto normal_at(ray_point const&) const override -> unit<vector3>;
 
 private:
   vector3       point_;

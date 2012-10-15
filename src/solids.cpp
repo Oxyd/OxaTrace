@@ -87,18 +87,16 @@ auto sphere::intersect(ray const& r) const -> intersection_list {
   // Case of D < 0.0 was already handled.
 }
 
-auto sphere::normal_at(ray const& ray, double param) const -> unit<vector3> {
-  vector3 const point = point_at(ray, param);
-
+auto sphere::normal_at(ray_point const& rp) const -> unit<vector3> {
   // We have to decide the sign of the result based on whether the ray 
   // originates within the sphere or outside it, so that a hit "straight on"
   // the sphere (perpendicular to the surface) will always generate a normal
   // vector that points directly toward the origin.
   
-  if (norm_squared(ray.origin() - center_) > radius_ * radius_) // If outside
-    return point - center_;
+  if (norm_squared(rp.ray().origin() - center_) > radius_ * radius_) 
+    return rp.point() - center_;                                  // If outside
   else
-    return center_ - point;
+    return center_ - rp.point();
 }
 
 plane::plane(vector3 const& point, vector3 const& u, vector3 const& v)
@@ -162,7 +160,7 @@ auto plane::intersect(ray const& ray) const -> intersection_list {
     return {};
 }
 
-auto plane::normal_at(ray const& ray, double) const -> unit<vector3> {
+auto plane::normal_at(ray_point const& rp) const -> unit<vector3> {
   // We want to get the normal pointing into the half-space containing 
   // o := ray.origin(). We have two half-spaces here, <o - P, N> < 0, and
   // <o - P, N> > 0, and two possible answers: N and -N. We know that the answer
@@ -173,7 +171,7 @@ auto plane::normal_at(ray const& ray, double) const -> unit<vector3> {
   // The question then is simple: Is <o - P, N> > 0? With x being the given
   // point on ray.
 
-  double const cos_alpha{cos_angle(ray.origin() - point_, normal_)};
+  double const cos_alpha{cos_angle(rp.ray().origin() - point_, normal_)};
 
   if (cos_alpha >= 0.0)  // The case cos_alpha == 0.0 should be handled 
     return normal_;      // *somehow* as well.
