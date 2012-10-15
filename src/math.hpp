@@ -5,14 +5,18 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <cmath>
 #include <functional>
 #include <iostream>
 #include <numeric>
 #include <stdexcept>
+#include <type_traits>
 #include <utility>
 
 namespace oxatrace {
+
+// Numbers --------------------------------------------------------------------
 
 constexpr double PI{3.141592};
 constexpr double EPSILON{1e-8};
@@ -27,7 +31,7 @@ inline auto double_neq(double a, double b) -> bool {
   return !double_eq(a, b);
 }
   
-// Vectors & Rays --------------------------------------------------------------
+// Vectors --------------------------------------------------------------------
 
 // N-dimensional arithmetic vector.
 template <std::size_t N>
@@ -50,7 +54,7 @@ public:
   vector() { }  // Uninitialized vector.
   template <typename... Components>
   vector(Components... components)  // sizeof...(Components) must equal N.
-    : components_{{components...}} { 
+    : components_{{static_cast<double>(components)...}} { 
     static_assert(sizeof...(Components) == N, "Wrong number of components.");
   }
 
@@ -110,7 +114,7 @@ public:
   auto z() const -> double { return const_cast<vector*>(this)->z(); }
   auto w() const -> double { return const_cast<vector*>(this)->w(); }
 
-  auto operator [] (std::size_t index) -> double& { return components_[index]; }
+  auto operator [] (std::size_t index) -> double& { return components_[index];}
   auto operator [] (std::size_t index) const -> double {
     return components_[index];
   }
@@ -154,6 +158,97 @@ private:
 using vector3 = vector<3>;
 using vector4 = vector<4>;
 
+// Streaming support.
+template <std::size_t N>
+auto operator << (std::ostream& out, vector<N> const& v) -> std::ostream& {
+  out << "(";
+  std::copy(v.begin(), std::prev(v.end()),
+            std::ostream_iterator<double>(out, ", "));
+  return out << *std::prev(v.end()) << ")";
+}
+
+// Unit-length vectors are those with .norm() == 1.0. They must be non-zero.
+template <typename Vector>
+class unit : boost::equality_comparable<unit<Vector>, Vector> {
+  struct do_not_normalize_t { } static constexpr do_not_normalize { };
+
+public:
+  // Construction...
+  unit(Vector const& v)                    : v_{normalize(v)} { }
+  unit(unit<Vector> const& other) noexcept : v_{other.v_} { }
+
+  // Forwarding ctor to allow for creation of unit<V> with a simple {x, y, z}.
+  template <typename... Args>
+  unit(Args... args) 
+    : v_{normalize(vector<sizeof...(Args)>{args...})} { }
+    
+  // Modifiers...
+  unit& operator = (Vector v) {
+    v_ = normalize(v); 
+    return *this;
+  }
+  
+  unit& operator = (unit<Vector> other) noexcept {
+    other.swap(*this);
+    return *this;
+  }
+  
+  void swap(unit<Vector>& other) noexcept { std::swap(v_, other.v_); }
+
+  // Observers...
+  auto get() const noexcept -> Vector { return v_; }
+  operator Vector () const noexcept   { return get(); }
+
+  auto operator - () const -> unit<Vector> { 
+    return unit(do_not_normalize, -v_);
+  }
+
+private:
+  Vector v_;
+
+  unit(do_not_normalize_t, Vector const& v) : v_{v} { assert(norm(v) == 1.0); }
+};
+
+template <typename V>
+auto operator << (std::ostream& out, unit<V> const& v) -> std::ostream& {
+  return out << v.get();
+}
+
+// Vector operations ----------------------------------------------------------
+
+namespace detail {
+
+  // Helpers to reduce the amount of typing for the overloads below.
+
+  // Get u if u is a vector; get u.get() if u is a unit<vector>.
+  template <typename V>
+  auto get_vector(V const& v) -> V {
+    return v; 
+  }
+  template <typename V> 
+  auto get_vector(unit<V> const& v) -> V {
+    return v.get(); 
+  }
+
+  // Given two types, A, B, decide whether there exists a vector type V, such 
+  // that either A is unit<V>, B is V; or A is V, B is unit<V>; or both
+  // are unit<V>.
+  template <typename A, typename B>
+  struct at_least_one_unit : std::false_type { };
+
+  template <typename V>
+  struct at_least_one_unit<unit<V>, V> : std::true_type { };
+  template <typename V>
+  struct at_least_one_unit<V, unit<V>> : std::true_type { };
+  template <typename V>
+  struct at_least_one_unit<unit<V>, unit<V>> : std::true_type { };
+
+  // Given a type T, return true if T is a vector or unit<Vector>.
+  template <typename T>    struct vector_like            : std::false_type { };
+  template <std::size_t N> struct vector_like<vector<N>> : std::true_type { };
+  template <typename V>    struct vector_like<unit<V>>   : std::true_type { };
+}
+
 // Equality comparison.
 template <std::size_t N>
 auto operator == (vector<N> const& u, vector<N> const& v) -> bool {
@@ -181,15 +276,6 @@ auto cross(vector3 const& u, vector3 const& v) -> vector3 {
   return {u.y() * v.z() - u.z() * v.y(),
           u.z() * v.x() - u.x() * v.z(),
           u.x() * v.y() - u.y() * v.x()};
-}
-
-// Streaming support.
-template <std::size_t N>
-auto operator << (std::ostream& out, vector<N> const& v) -> std::ostream& {
-  out << "(";
-  std::copy(v.begin(), std::prev(v.end()),
-            std::ostream_iterator<double>(out, ", "));
-  return out << *std::prev(v.end()) << ")^T";
 }
 
 // Get the square of the Euclidean (L2) norm of a vector. That is the same
@@ -221,48 +307,57 @@ auto normalize(vector<N> const& v) -> vector<N> {
     throw std::invalid_argument{"normalize: Given a zero vector"};
 }
 
-// Unit-length vectors are those with .norm() == 1.0. They must be non-zero.
-template <typename Vector>
-class unit : boost::equality_comparable<unit<Vector>, Vector> {
-public:
-  // Construction...
-  unit(Vector v)
-    : v_{normalize(v)} { }
-  
-  unit(unit<Vector> const& other) noexcept
-    : v_{other.v_} { }
-
-  // Forwarding ctor to allow for creation of unit<V> with a simple {x, y, z}.
-  template <typename... Args>
-  unit(Args... args) 
-    : v_{normalize(vector<sizeof...(Args)>{args...})} { }
-    
-  // Modifiers...
-  unit& operator = (Vector v) {
-    v_ = normalize(v); 
-    return *this;
-  }
-  
-  unit& operator = (unit<Vector> other) noexcept {
-    other.swap(*this);
-    return *this;
-  }
-  
-  void swap(unit<Vector>& other) noexcept { std::swap(v_, other.v_); }
-
-  // Observers...
-  auto get() const noexcept -> Vector { return v_; }
-  operator Vector () const noexcept   { return get(); }
-
-private:
-  Vector v_;
-};
-
 // Comparison of unit<Vector> with Vector.
-template <typename Vector>
-bool operator == (unit<Vector> const& u, Vector const& v) {
-  return u.get() == v;
+template <typename U, typename V>
+auto operator == (U const& u, V const& v)
+  ->
+  typename std::enable_if<
+    detail::at_least_one_unit<U, V>::value,
+    bool
+  >::type
+{ return detail::get_vector(u) == detail::get_vector(v); }
+
+// Overloads of vector operations for unit<V>.
+template <typename U, typename V>
+auto dot(U const& u, V const& v)
+  ->
+  typename std::enable_if<
+    detail::at_least_one_unit<U, V>::value,
+    double
+  >::type
+{ return dot(detail::get_vector(u), detail::get_vector(v)); }
+
+template <typename V> auto norm(unit<V> const&)        -> double { return 1.0;}
+template <typename V> auto norm_squared(unit<V> const&)-> double { return 1.0;}
+template <typename V> auto zero(unit<V> const&) -> bool { return false; }
+template <typename V> auto normalize(unit<V> const& v) -> unit<V> { return v; }
+
+// Get the cosine of the oriented angle between two vectors. That means the
+// result is within [-1, 1].
+template <typename U, typename V>
+auto cos_angle(
+  U const& u, V const& v,
+  typename std::enable_if<
+    detail::vector_like<U>::value && detail::vector_like<V>::value
+  >::type* = 0) 
+  -> double 
+{ return dot(u, v) / (norm(u) * norm(v)); }
+
+// Get the cosine of the unoriented angle between two vectors. That means the
+// result is within [0, 1].
+template <typename U, typename V>
+auto cos_angle_undir(
+  U const& u, V const& v,
+  typename std::enable_if<
+    detail::vector_like<U>::value && detail::vector_like<V>::value
+  >::type* = 0)
+  -> double
+{ 
+  double const cos_alpha{cos_angle(u, v)};
+  return cos_alpha <= 0 ? cos_alpha : -cos_alpha;
 }
+
+// Ray ------------------------------------------------------------------------
 
 // A ray is defined by its origin and direction. Rays are immutable.
 class ray {

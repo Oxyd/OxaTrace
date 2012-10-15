@@ -58,9 +58,9 @@ auto sphere::intersect(ray const& r) const -> intersection_list {
   
   vector3 const a    = r.origin() - center_;
   double const  a_2  = norm_squared(a);
-  double const  ad   = dot(a, r.direction().get());
+  double const  ad   = dot(a, r.direction());
   double const  ad_2 = ad * ad;
-  double const  d_2  = norm_squared(r.direction().get());
+  double const  d_2  = norm_squared(r.direction());
   double const  r_2  = radius_ * radius_;
   double const  D    = ad_2 - d_2 * (a_2 - r_2);
 
@@ -149,8 +149,8 @@ auto plane::intersect(ray const& ray) const -> intersection_list {
   //
 
   vector3 const a = ray.origin() - point_;
-  double const aN = dot(a, normal_.get());
-  double const dN = dot(ray.direction().get(), normal_.get());
+  double const aN = dot(a, normal_);
+  double const dN = dot(ray.direction(), normal_);
 
   if (double_eq(dN, 0.0)) return {};  // Test for ray parallel to the plane.
 
@@ -173,12 +173,12 @@ auto plane::normal_at(ray const& ray, double) const -> unit<vector3> {
   // The question then is simple: Is <o - P, N> > 0? With x being the given
   // point on ray.
 
-  double const d{dot(normalize(ray.origin() - point_), normal_.get())};
+  double const cos_alpha{cos_angle(ray.origin() - point_, normal_)};
 
-  if (d >= 0.0)  // The case d == 0.0 should be handled *somehow* as well.
-    return normal_;
+  if (cos_alpha >= 0.0)  // The case cos_alpha == 0.0 should be handled 
+    return normal_;      // *somehow* as well.
   else
-    return -normal_.get();
+    return -normal_;
 }
 
 material::material(color const& ambient, double diffuse, double specular,
@@ -218,7 +218,7 @@ auto material::illuminate(
   //
   // XXX: This should take distance to the light source into account as well.
 
-  double const cos_alpha = dot(normal.get(), light_dir.get());
+  double const cos_alpha = cos_angle(normal, light_dir);
 
   if (cos_alpha <= 0.0) return base_color;
 

@@ -1,6 +1,9 @@
 #include "math.hpp"
+
 #include <gtest/gtest.h>
+
 #include <sstream>
+#include <type_traits>
 
 using namespace oxatrace;
 
@@ -34,7 +37,7 @@ TEST_F(vector_test, member_access) {
 TEST_F(vector_test, streaming) {
   std::ostringstream ss;
   ss << u;
-  EXPECT_EQ("(1, 2, 3)^T", ss.str());
+  EXPECT_EQ("(1, 2, 3)", ss.str());
 }
 
 TEST_F(vector_test, addition) {
@@ -97,7 +100,7 @@ TEST_F(vector_test, norm) {
   EXPECT_DOUBLE_EQ(std::sqrt(77.0), b);
 }
 
-TEST(vector, unit_construction_assignment) {
+TEST(unit, unit_construction_assignment) {
   vector3 v{1.0, 2.0, -9.0};
   unit<vector3> unit_v{v};
 
@@ -108,15 +111,142 @@ TEST(vector, unit_construction_assignment) {
   unit_v = unit_u;
 }
 
-TEST(vector, unit_contains_unit_vectors) {
+TEST(unit, unit_contains_unit_vectors) {
   vector3 v{1.0, 2.0, -9.0};
   unit<vector3> uv{v};
   EXPECT_EQ(normalize(v), uv.get());
 }
 
-TEST(vector, unit_does_not_like_zero_vectors) {
+TEST(unit, unit_does_not_like_zero_vectors) {
   vector3 z{0.0, 0.0, 0.0};
   ASSERT_THROW(unit<vector3>{z}, std::logic_error);
+}
+
+template <typename U, typename V, typename W>
+void test_unit_vector_addition(U const& u, V const& v, W const& result) {
+  auto w = u + v;
+  static_assert(std::is_same<decltype(w), W>::value,
+                "Wrong addition result type");
+  EXPECT_EQ(result, w);
+}
+
+template <typename U, typename V, typename W>
+void test_unit_vector_subtraction(U const& u, V const& v, W const& result) {
+  auto w = u - v;
+  static_assert(std::is_same<decltype(w), W>::value,
+                "Wrong subtraction result type");
+  EXPECT_EQ(result, w);
+}
+
+TEST(unit, unit_vector_addition) {
+  test_unit_vector_addition(unit<vector3>{1.0, 0.0, 0.0},
+                            vector3{0.0, 1.0, 0.0},
+                            vector3{1.0, 1.0, 0.0});
+}
+
+TEST(unit, vector_unit_addition) {
+  test_unit_vector_addition(vector3{1.0, 0.0, 0.0},
+                            unit<vector3>{0.0, 1.0, 0.0},
+                            vector3{1.0, 1.0, 0.0});
+}
+
+TEST(unit, unit_unit_addition) {
+  test_unit_vector_addition(unit<vector3>{1.0, 0.0, 0.0},
+                            unit<vector3>{0.0, 1.0, 0.0},
+                            vector3{1.0, 1.0, 0.0});
+}
+
+TEST(unit, unit_vector_subtraction) {
+  test_unit_vector_subtraction(unit<vector3>{1.0, 0.0, 0.0},
+                               vector3{0.0, 1.0, 0.0},
+                               vector3{1.0, -1.0, 0.0});
+}
+
+TEST(unit, vector_unit_subtraction) {
+  test_unit_vector_subtraction(vector3{1.0, 0.0, 0.0},
+                               unit<vector3>{0.0, 1.0, 0.0},
+                               vector3{1.0, -1.0, 0.0});
+}
+
+TEST(unit, unit_unit_subtraction) {
+  test_unit_vector_subtraction(unit<vector3>{1.0, 0.0, 0.0},
+                               unit<vector3>{0.0, 1.0, 0.0},
+                               vector3{1.0, -1.0, 0.0});
+}
+
+TEST(unit, unit_scalar_multiplication) {
+  unit<vector3> v{1.0, 0.0, 0.0};
+  double scalar = 5.0;
+
+  auto u = scalar * v;
+  auto w = v * scalar;
+
+  static_assert(std::is_same<decltype(u), vector3>::value,
+                "Wrong result of scalar-unit multiplication");
+  static_assert(std::is_same<decltype(w), vector3>::value,
+                "Wrong result of unit-scalar multiplication");
+
+  vector3 result{5.0, 0.0, 0.0};
+  EXPECT_EQ(result, u);
+  EXPECT_EQ(result, w);
+}
+
+TEST(unit, unit_scalar_division) {
+  unit<vector3> v{1.0, 0.0, 0.0};
+  double scalar = 2.0;
+
+  auto u = v / scalar;
+
+  static_assert(std::is_same<decltype(u), vector3>::value,
+                "Wrong result of unit-scalar division.");
+
+  vector3 result{0.5, 0.0, 0.0};
+  EXPECT_EQ(result, u);
+}
+
+TEST(unit, unit_dot_product) {
+  unit<vector3> a{1.0, 0.0, 0.0};
+  unit<vector3> b{0.0, 1.0, 0.0};
+  vector3       c{1.0, 1.0, 0.0};
+
+  double x = dot(a, c);
+  double y = dot(c, a);
+  EXPECT_EQ(1.0, x);
+  EXPECT_EQ(1.0, y);
+
+  x = dot(a, b);
+  y = dot(b, a);
+  EXPECT_EQ(0.0, x);
+  EXPECT_EQ(0.0, y);
+}
+
+TEST(unit, unit_cross_product) {
+  unit<vector3> a{1.0, 0.0, 0.0};
+  unit<vector3> b{0.0, 1.0, 0.0};
+  vector3       c{1.0, 1.0, 0.0};
+
+  auto x = cross(a, c);
+  auto y = cross(c, a);
+
+  static_assert(std::is_same<decltype(x), vector3>::value,
+                "Wrong result of unit-vector cross product");
+  static_assert(std::is_same<decltype(y), vector3>::value,
+                "Wrong result of vector-unit cross product");
+
+  EXPECT_EQ((vector3{0, 0, 1}), x);
+  EXPECT_EQ((vector3{0, 0, -1}), y);
+
+  x = cross(a, b);
+  y = cross(b, a);
+
+  EXPECT_EQ((vector3{0, 0, 1}), x);
+  EXPECT_EQ((vector3{0, 0, -1}), y);
+}
+
+TEST(unit, unit_norm) {
+  unit<vector3> x{1.0, 2.0, 3.0};
+  EXPECT_EQ(1.0, norm(x));
+  EXPECT_EQ(1.0, norm_squared(x));
 }
 
 auto main(int argc, char** argv) -> int {

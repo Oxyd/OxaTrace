@@ -8,10 +8,6 @@
 
 using namespace oxatrace;
 
-std::ostream& operator << (std::ostream& out, unit<vector3> const& v) {
-  return out << v.get();
-}
-
 template <typename Scene>
 struct scene_test : testing::Test {
   std::unique_ptr<oxatrace::scene> scene;

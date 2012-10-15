@@ -69,17 +69,17 @@ camera::camera(vector3 center, unit<vector3> view, unit<vector3> up,
     throw std::out_of_range{"camera::camera: field_of_view out of range"};
 
   double const h = 1.0 / (2.0 * std::tan(field_of_view / 2.0));
-  unit<vector3> const left{cross(-view.get(), up)};
+  unit<vector3> const left{cross(-view, up)};
 
   // Correct the up vector in case the input view and up are not perpendicular.
-  unit<vector3> const corrected_up{cross(view.get(), left)};
+  unit<vector3> const corrected_up{cross(view, left)};
 
   pin_center_ = center;
   vector3 const film_center = pin_center_ - h * view;
   film_u_axis_ = left;
 
   double const aspect = double(view_height) / double(view_width);
-  film_v_axis_ = corrected_up.get() * aspect;
+  film_v_axis_ = corrected_up * aspect;
 
   film_bottom_right_ = 
     film_center - (1.0 / 2.0) * (film_u_axis_ + film_v_axis_);

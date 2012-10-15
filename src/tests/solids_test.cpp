@@ -44,7 +44,7 @@ auto operator << (std::ostream& out, sphere const& s) -> std::ostream& {
 
 auto operator << (std::ostream& out, plane const& p) -> std::ostream& {
   return out << "plane{point = " << p.point()
-             << ", normal = " << p.normal().get() << "}";
+             << ", normal = " << p.normal() << "}";
 }
 
 auto operator << (std::ostream& out, shape::intersection_list const& is)
@@ -74,9 +74,9 @@ void normal_test(sphere const& sphere, ray const& ray, double param) {
 
   double const origin_center_dist = norm(sphere.center() - ray.origin());
   if (origin_center_dist >= sphere.radius())
-    EXPECT_EQ(normal.get(), unit<vector3>{point - sphere.center()}.get());
+    EXPECT_EQ(normal, unit<vector3>{point - sphere.center()});
   else
-    EXPECT_EQ(normal.get(), unit<vector3>{-(point - sphere.center())}.get());
+    EXPECT_EQ(normal, unit<vector3>{-(point - sphere.center())});
 }
 
 void normal_test(plane const& plane, ray const& ray, double param) {
@@ -89,9 +89,9 @@ void normal_test(plane const& plane, ray const& ray, double param) {
   // in (0, 1].
 
   unit<vector3> const dir{ray.origin() - plane.point()};
-  double const cos_alpha = dot(dir.get(), normal.get());
-  EXPECT_LE(cos_alpha, 1) << dir.get() << " versus " << normal.get();
-  EXPECT_GT(cos_alpha, 0) << dir.get() << " versus " << normal.get();
+  double const cos_alpha = dot(dir, normal);
+  EXPECT_LE(cos_alpha, 1) << dir << " versus " << normal;
+  EXPECT_GT(cos_alpha, 0) << dir << " versus " << normal;
 }
 
 template <typename Solid>
