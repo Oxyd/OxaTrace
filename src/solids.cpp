@@ -3,6 +3,8 @@
 #include "color.hpp"
 #include "lights.hpp"
 
+#include <Eigen/Geometry>
+
 #include <cassert>
 #include <cmath>
 #include <algorithm>
@@ -57,10 +59,10 @@ auto sphere::intersect(ray const& r) const -> intersection_list {
   // for the ray formula.
   
   vector3 const a    = r.origin() - center_;
-  double const  a_2  = norm_squared(a);
-  double const  ad   = dot(a, r.direction());
+  double const  a_2  = a.squaredNorm();
+  double const  ad   = a.dot(r.direction());
   double const  ad_2 = ad * ad;
-  double const  d_2  = norm_squared(r.direction());
+  double const  d_2  = r.direction().squaredNorm();
   double const  r_2  = radius_ * radius_;
   double const  D    = ad_2 - d_2 * (a_2 - r_2);
 
@@ -93,7 +95,7 @@ auto sphere::normal_at(ray_point const& rp) const -> unit<vector3> {
   // the sphere (perpendicular to the surface) will always generate a normal
   // vector that points directly toward the origin.
   
-  if (norm_squared(rp.ray().origin() - center_) > radius_ * radius_) 
+  if ((rp.ray().origin() - center_).squaredNorm() > radius_ * radius_)
     return rp.point() - center_;                                  // If outside
   else
     return center_ - rp.point();
@@ -102,7 +104,7 @@ auto sphere::normal_at(ray_point const& rp) const -> unit<vector3> {
 plane::plane(vector3 const& point, vector3 const& u, vector3 const& v)
 try
   : point_{point}
-  , normal_{cross(u, v)} { }
+  , normal_{u.cross(v)} { }
 catch (std::invalid_argument&) {
   // This must have been thrown from unit<>'s constructor because normal_
   // was initialized by a zero vector, which must be because u, v are colinear.
@@ -147,8 +149,8 @@ auto plane::intersect(ray const& ray) const -> intersection_list {
   //
 
   vector3 const a = ray.origin() - point_;
-  double const aN = dot(a, normal_);
-  double const dN = dot(ray.direction(), normal_);
+  double const aN = a.dot(normal_);
+  double const dN = ray.direction().dot(normal_);
 
   if (double_eq(dN, 0.0)) return {};  // Test for ray parallel to the plane.
 

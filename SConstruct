@@ -16,6 +16,7 @@ defaultEnv.Append(CCFLAGS=[
 ])
 defaultEnv.Append(LINKFLAGS=['-pthread'])
 defaultEnv.Append(LIBS=['png', 'm'])
+defaultEnv.Append(CPPPATH=['./eigen'])
 
 if not verbose:
   defaultEnv.Replace(ARCOMSTR='Archiving $TARGET')

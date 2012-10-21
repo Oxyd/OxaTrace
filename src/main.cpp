@@ -35,8 +35,8 @@ auto main(int argc, char** argv) -> int {
   );
 
   std::unique_ptr<scene> sc{simple_scene::make(std::move(def))};
-  camera cam{{3.0, 3.5, 8.0}, {-0.4, -0.2, -1.0}, {0.0, 1.0, 0.0},
-             640, 480, PI / 2.0};
+  camera cam{vector3{3.0, 3.5, 8.0}, unit3{-0.4, -0.2, -1.0}, 
+             unit3{0.0, 1.0, 0.0}, 640, 480, PI / 2.0};
 
   image result{640, 480};
   for (image::index y = 0; y < result.height(); ++y)
@@ -56,8 +56,8 @@ auto main(int argc, char** argv) -> int {
       for (light const& l : sc->lights()) {
         unit<vector3> const light_dir = {l.get_source() - i->position()};
         if (auto obstacle = sc->intersect_solid({i->position(), light_dir}))
-          if (norm_squared(obstacle->position() - i->position()) <
-              norm_squared(l.get_source() - i->position()))
+          if ((obstacle->position() - i->position()).squaredNorm() <
+              (l.get_source() - i->position()).squaredNorm())
             continue;
 
         result_pixel = i->solid().material().illuminate(

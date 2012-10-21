@@ -1,10 +1,11 @@
 #include "camera.hpp"
+
 #include <cmath>
-#include <iostream>
+#include <stdexcept>
 
 using namespace oxatrace;
 
-camera::camera(vector3 center, unit<vector3> view, unit<vector3> up,
+camera::camera(vector3 center, unit3 view, unit3 up,
                std::size_t view_width, std::size_t view_height,
                double field_of_view) {
   // 
@@ -69,10 +70,10 @@ camera::camera(vector3 center, unit<vector3> view, unit<vector3> up,
     throw std::out_of_range{"camera::camera: field_of_view out of range"};
 
   double const h = 1.0 / (2.0 * std::tan(field_of_view / 2.0));
-  unit<vector3> const left{cross(-view, up)};
+  unit3 const left = -view.cross(up);
 
   // Correct the up vector in case the input view and up are not perpendicular.
-  unit<vector3> const corrected_up{cross(view, left)};
+  unit3 const corrected_up = view.cross(left);
 
   pin_center_ = center;
   vector3 const film_center = pin_center_ - h * view;

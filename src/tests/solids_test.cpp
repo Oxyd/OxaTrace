@@ -72,11 +72,11 @@ void normal_test(sphere const& sphere, ray const& ray, double param) {
   // Does the ray originate inside the sphere? If so, we expect the normal to
   // point inwards. Otherwise it is expected to point outwards.
 
-  double const origin_center_dist = norm(sphere.center() - ray.origin());
+  double const origin_center_dist = (sphere.center() - ray.origin()).norm();
   if (origin_center_dist >= sphere.radius())
-    EXPECT_EQ(normal, unit<vector3>{point - sphere.center()});
+    EXPECT_EQ(normal, unit3{point - sphere.center()});
   else
-    EXPECT_EQ(normal, unit<vector3>{-(point - sphere.center())});
+    EXPECT_EQ(normal, unit3{-(point - sphere.center())});
 }
 
 void normal_test(plane const& plane, ray const& ray, double param) {
@@ -89,7 +89,7 @@ void normal_test(plane const& plane, ray const& ray, double param) {
   // in (0, 1].
 
   unit<vector3> const dir{ray.origin() - plane.point()};
-  double const cos_alpha = dot(dir, normal);
+  double const cos_alpha = dir.dot(normal);
   EXPECT_LE(cos_alpha, 1) << dir << " versus " << normal;
   EXPECT_GT(cos_alpha, 0) << dir << " versus " << normal;
 }
@@ -108,7 +108,7 @@ void solid_intersection_test(Solid const& solid, ray const& ray,
     normal_test(solid, ray, param);
 
     vector3 const point{point_at(ray, param)};
-    double const dist  {norm(ray.origin() - point)};
+    double const dist  {(ray.origin() - point).norm()};
     EXPECT_GT(dist, min_dist);
     min_dist = dist;
   }
@@ -177,16 +177,16 @@ INSTANTIATE_TEST_CASE_P(
   plane_tests,
   plane_intersection_test,
   testing::Values(
-    std::make_tuple(plane{vector3{0.0, 0.0, 0.0}, vector3::unit_y()},
+    std::make_tuple(plane{vector3{0.0, 0.0, 0.0}, vector3::UnitY()},
                     ray{vector3{0.0, 2.0, 0.0}, vector3{0.0, -1.0, 0.0}},
                     1),
-    std::make_tuple(plane{vector3{0.0, 0.0, 0.0}, vector3::unit_y()},
+    std::make_tuple(plane{vector3{0.0, 0.0, 0.0}, vector3::UnitY()},
                     ray{vector3{0.0, 2.0, 0.0}, vector3{1.0, -1.0, 1.0}},
                     1),
-    std::make_tuple(plane{vector3{0.0, 0.0, 0.0}, vector3::unit_y()},
+    std::make_tuple(plane{vector3{0.0, 0.0, 0.0}, vector3::UnitY()},
                     ray{vector3{0.0, -1.0, 2.0}, vector3{1.0, 1.0, 0.0}},
                     1),
-    std::make_tuple(plane{vector3{0.0, 0.0, 0.0}, vector3::unit_y()},
+    std::make_tuple(plane{vector3{0.0, 0.0, 0.0}, vector3::UnitY()},
                     ray{vector3{1.0, 1.0, 1.0}, vector3{1.0, 0.0, 0.0}},
                     0),
     std::make_tuple(plane{vector3{0.0, -2.0, 0.0}, vector3{0.0, -1.0, 0.0}},

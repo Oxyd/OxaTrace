@@ -3,6 +3,8 @@
 
 #include "math.hpp"
 
+#include <Eigen/Geometry>
+
 namespace oxatrace {
 
 // Camera is a source of rays. It models a simple pinhole camera. It's defined
@@ -23,7 +25,7 @@ public:
   // Construction...
   // Throws:
   //   -- std::out_of_range: field_of_view not in the interval (0, pi).
-  camera(vector3 center, unit<vector3> view, unit<vector3> up,
+  camera(vector3 center, unit3 view, unit3 up,
          std::size_t view_width, std::size_t view_height, 
          double field_of_view);
 
