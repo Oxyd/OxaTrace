@@ -38,22 +38,24 @@ auto sphere::intersect(ray const& r) const -> intersection_list {
   //                      ||a + td||^2 = r^2
   //                        (a + td)^2 = r^2
   //            a^2 + 2t(ad) + t^2 d^2 = r^2
-  //    t^2 d^2 + t(2ad) + (a^2 - r^2) = 0,
+  //    t^2 d^2 + t(2ad) + (a^2 - r^2) = 0
+  //        t^2 + t(2ad) + (a^2 - r^2) = 0,
   //
   // a quadratic equation in t. (Here v^2, where v is a vector, is the scalar
-  // product of v with itself.)
+  // product of v with itself.) The last line follows from the fact that
+  // d^2 = 1, since d is a unit vector.
   //
   // Solving the equation for t gives us the solutions
   //
-  //        1           ___________________________
-  //   t = --- (-2ad ± √4(ad)^2 - 4(d^2 (a^2 - r^2))
+  //        1           ______________________
+  //   t = --- (-2ad ± √4(ad)^2 - 4(a^2 - r^2)
   //        2
   //
-  //        1            ________________________
-  //     = --- (-2ad ± 2√(ad)^2 - d^2 (a^2 - r^2))
+  //        1            ____________________
+  //     = --- (-2ad ± 2√(ad)^2 - (a^2 - r^2)
   //        2
-  //              ________________________
-  //     = -ad ± √(ad)^2 - d^2 (a^2 - r^2)
+  //              ____________________
+  //     = -ad ± √(ad)^2 - (a^2 - r^2)
   // 
   // All real and nonnegative t's are then the sought parameters of intersection
   // for the ray formula.
@@ -62,9 +64,8 @@ auto sphere::intersect(ray const& r) const -> intersection_list {
   double const  a_2  = a.squaredNorm();
   double const  ad   = a.dot(r.direction());
   double const  ad_2 = ad * ad;
-  double const  d_2  = r.direction().squaredNorm();
   double const  r_2  = radius_ * radius_;
-  double const  D    = ad_2 - d_2 * (a_2 - r_2);
+  double const  D    = ad_2 - (a_2 - r_2);
 
   if (D < 0.0) return {};
 
