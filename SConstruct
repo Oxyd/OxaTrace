@@ -10,7 +10,7 @@ color   = ARGUMENTS.get('color', 1)
 ## Environments
 ##
 
-defaultEnv = Environment()
+defaultEnv = Environment(tools=['gcc', 'mingw'])
 defaultEnv.Append(CCFLAGS=[
   '-Wall', '-Wextra', '-std=c++11', '-pedantic', '-pthread'
 ])
@@ -53,8 +53,8 @@ except KeyError:
 ##
 
 sources = Glob('src/*.cpp')
-env.Program('oxatrace', sources)
-Default('oxatrace')
+oxatrace = env.Program('oxatrace', sources)
+Default(oxatrace)
 
 ##
 ## Unit tests
@@ -75,8 +75,9 @@ testsEnv.VariantDir('tests-build', 'src', duplicate=0)
 testsEnv.Append(CPPPATH=['src', 'gtest/include'])
 testsEnv.Append(LIBS=[gtest])
 
+import os
 progObjects = testsEnv.Glob('tests-build/*.cpp', strings=True)
-progObjects.remove('tests-build/main.cpp')
+progObjects.remove(os.path.join('tests-build', 'main.cpp'))
 
 def _runTest(env, target, source):
   executable = str(source[0].abspath)
@@ -96,5 +97,3 @@ for test in tests:
   Alias(test, stamp)
 
 Alias('tests', tests)
-
-# vim:syntax=python
