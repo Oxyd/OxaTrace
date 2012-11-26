@@ -41,7 +41,7 @@ auto scene::intersection::position() const -> vector3 {
 
 auto scene::intersection::normal() const -> unit<vector3> {
   if (!normal_)
-    normal_ = solid_.shape().normal_at(ray_point_);
+    normal_ = solid_.normal_at(ray_point_);
   return *normal_;
 }
 
@@ -57,7 +57,7 @@ auto simple_scene::intersect_solid(ray const& ray) const
   for (auto iter = definition_.solids_begin(), end = definition_.solids_end();
        iter != end; ++iter) {
     solid const& solid = *iter;
-    shape::intersection_list const intersections{solid.shape().intersect(ray)};
+    shape::intersection_list const intersections{solid.intersect(ray)};
 
     if (intersections.empty()) continue;  // No intersection at all.
 

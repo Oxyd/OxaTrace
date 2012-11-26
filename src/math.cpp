@@ -4,12 +4,47 @@
 
 using namespace oxatrace;
 
+auto oxatrace::get_any_orthogonal(unit3 const& v) -> unit3 {
+  // If u is the solution, it holds that <v, u> = 0, or
+  // 
+  //                v_x u_x + v_y u_y + v_z u_z = 0.
+  //
+  // Let u_x = u_y = 1, then u_z is given as
+  //
+  //                           1
+  //                    u_z = --- (-v_x - v_y).
+  //                          v_z
+  //
+  // That assumes v_z =/= 0. If that isn't the case, one can set two components
+  // of u to 1 and solve for the third one. That is always possible since v
+  // can't be a zero vector.
+  //
+  // To enhance numerical stability, we will choose the largest (in absolute
+  // value) component of v, fix the other components of u and solve for the
+  // remaining one.
+
+  double const x{std::abs(v.x())};
+  double const y{std::abs(v.y())};
+  double const z{std::abs(v.z())};
+
+  if (x >= y && x >= z)
+    return {(-v.y() - v.z()) / v.x(), 1.0, 1.0};
+  else if (y >= x && y >= z)
+    return {1.0, (-v.x() - v.z()) / v.y(), 1.0};
+  else
+    return {1.0, 1.0, (-v.x() - v.y()) / v.z()};
+}
+
 auto oxatrace::operator << (std::ostream& out, ray const& ray) 
   -> std::ostream& {
-  return out << "ray{origin = " << ray.origin()
-             << ", direction = " << ray.direction()
-             << "}";
+  return out << "ray{origin =\n" << ray.origin()
+             << "\ndirection = " << ray.direction()
+             << "\n}";
 }
+
+auto oxatrace::transform(ray const& ray, Eigen::Affine3d const& tr)
+  -> oxatrace::ray
+{ return {tr * ray.origin().homogeneous(), tr.linear() * ray.direction()}; }
 
 auto oxatrace::point_at(ray const& r, double t) -> Eigen::Vector3d {
   if (t >= 0.0)

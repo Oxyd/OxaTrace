@@ -6,74 +6,52 @@
 
 #include <memory>
 #include <stdexcept>
-#include <tuple>
+#include <string>
 #include <vector>
 
 namespace oxatrace {
 
 class light;
 
-// Shapes ----------------------------------------------------------------------
+// Shapes ---------------------------------------------------------------------
 
-// Shape defines the set of points occupied by a solid, or a part thereof 
-// (e.g. when used in conjunction with CSG). This set is defined implicitly,
-// using the intersect() member function.
-struct shape {
-  // List of the parameters into the ray formula.
+// Elementary shape is simply a shape in its basic orientation. For example,
+// unit sphere centered around the origin, the xy plane, or an cylinder with
+// unit diameter, unit height pointing up along the y axis and centered around
+// the origin.
+//
+// Elementary shapes are expected to contain no non-static non-const data. This
+// is to allow sharing of elementary shapes among many solids as well as their
+// caching within an shape factory. This restriction also ensures
+// that accessing a shared shape is thread-safe.
+class shape {
+public:
   using intersection_list = std::vector<double>;
 
   virtual ~shape() noexcept { }
 
-  // Given a ray, get all the intersection points of this shape with the given
-  // ray.
-  virtual auto intersect(ray const& r) const -> intersection_list = 0;
+  // Intersect this elementary shape with a ray
+  virtual auto intersect(ray const& ray) const -> intersection_list = 0;
 
-  // Given an intersection point, get the normal vector to this shape.
-  // Parameters:
-  //   -- ray_point: The ray that intersected this solid along with the
-  //                 point of intersection.
-  virtual auto normal_at(ray_point const&) const -> unit<vector3> = 0;
+  // Get the normal to this shape for a given intersection point. The given
+  // point is assumed to lie on the surface of this elementary shape; if this
+  // isn't satisfied, the behaviour is undefined. The vector returned is the
+  // one pointing out of the shape.
+  virtual auto normal_at(ray_point const& point) const -> unit3 = 0;
 };
 
-// A sphere is defined by its centre point and radius.
+// Unit sphere centered around the origin.
 class sphere final : public shape {
 public:
-  // Throws std::logic_error if radius <= 0.0.
-  sphere(vector3 const& center, double radius);
-
-  // Observers...
-  auto center() const -> vector3 { return center_; }
-  auto radius() const -> double  { return radius_; }
-
-  // shape functionality...
   virtual auto intersect(ray const&) const override -> intersection_list;
-  virtual auto normal_at(ray_point const&) const override -> unit<vector3>;
-
-private:
-  vector3 center_;
-  double  radius_;
+  virtual auto normal_at(ray_point const&) const override -> unit3;
 };
 
-// Plane in the 3D space is an affine subspace of dimension 2.
+// The xy plane.
 class plane final : public shape {
 public:
-  // Define a plane by a point on the plane, and two generators of the plane.
-  // Throws std::logic_error if u, v are linearly dependent.
-  plane(vector3 const& point, vector3 const& u, vector3 const& v);
-
-  // Define a plane by a point on the plane and a normal vector to the plane.
-  plane(vector3 const& point, unit<vector3> const& normal);
-
-  // Observers...
-  auto point() const  -> vector3       { return point_; }
-  auto normal() const -> unit<vector3> { return normal_; }
-
   virtual auto intersect(ray const&) const override -> intersection_list;
-  virtual auto normal_at(ray_point const&) const override -> unit<vector3>;
-
-private:
-  vector3       point_;
-  unit<vector3> normal_;
+  virtual auto normal_at(ray_point const&) const override -> unit3;
 };
 
 // Materials -------------------------------------------------------------------
@@ -121,18 +99,45 @@ private:
 // Renderable solids -----------------------------------------------------------
 
 // Solid is a renderable entity. It can be intersected with a ray, and has 
-// various attributes associated with it, such as colour, material or texture.
+// various attributes associated with it, such as shape, material or texture.
 class solid {
 public:
   // Construct a solid of a given shape.
   solid(std::shared_ptr<oxatrace::shape> const& s, material mat);
 
-  auto shape() const noexcept    -> oxatrace::shape const&;
+  // Observers...
   auto material() const noexcept -> oxatrace::material const&;
+
+  auto intersect(ray const& ray) const -> shape::intersection_list;
+  auto normal_at(ray_point const& rp) const -> unit3;
+
+  // Modifiers...
+  // Translate this solid by a vector.
+  auto translate(vector3 const& tr) -> solid&;
+
+  // Scale this solid by a coefficient. All axes can be scaled by the same
+  // amount, or different coefficient may be specified for each axis.
+  // Throws:
+  //   -- std::invalid_argument: coef <= 0.0 or any of x, y, z <= 0.0.
+  auto scale(double coef) -> solid&;
+  auto scale(double x, double y, double z) -> solid&;
+
+  // Rotate this solid around an axis.
+  auto rotate(Eigen::AngleAxisd const& rot) -> solid&;
+
+  // Apply a generic transformation to this solid. If an inverse transformation
+  // is provided, it needs to be correct, otherwise undefined results will
+  // occur. If it isn't provided, one will be calculated by inverting the given
+  // matrix.
+  auto transform(Eigen::Affine3d const& tr, Eigen::Affine3d const& inverse)
+    -> solid&;
+  auto transform(Eigen::Affine3d const& tr) -> solid&;
 
 private:
   std::shared_ptr<oxatrace::shape> shape_;
   oxatrace::material               material_;
+  Eigen::Affine3d                  world_to_object_;
+  Eigen::Affine3d                  object_to_world_;
 };
 
 }  // namespace oxatrace

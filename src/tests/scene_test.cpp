@@ -8,6 +8,7 @@
 
 using namespace oxatrace;
 
+#if 0
 template <typename Scene>
 struct scene_test : testing::Test {
   std::unique_ptr<oxatrace::scene> scene;
@@ -79,6 +80,7 @@ TYPED_TEST(scene_test, miss_test_2) {
 
   EXPECT_FALSE(i);
 }
+#endif
 
 int main(int argc, char** argv) {
   testing::InitGoogleTest(&argc, argv);

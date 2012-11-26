@@ -2,9 +2,13 @@
 #define OXATRACE_MATH_HPP
 
 #include <Eigen/Core>
+#include <Eigen/Geometry>
 
 #include <boost/optional.hpp>
 
+#include <initializer_list>
+#include <stdexcept>
+#include <type_traits>
 #include <utility>
 
 namespace oxatrace {
@@ -31,20 +35,19 @@ class unit : public MatrixT {
   static_assert(MatrixT::IsVectorAtCompileTime,
                 "Only vectors can be unit-length.");
 
-public:
-  template <typename OtherDerived>
-  unit(Eigen::MatrixBase<OtherDerived> const& other)
-    : MatrixT(other.normalized()) { }
+  struct enabler { };
 
+public:
   template <typename OtherMatrixT>
   unit(unit<OtherMatrixT> const& other)
-    : MatrixT(other) { }
-
-  template <typename... Elems>
-  unit(Elems... elems)
-    : MatrixT(MatrixT(elems...).normalized()) { }
+    : MatrixT{other} { }
 
   unit(unit const&) = default;
+
+  // Forward to some MatrixT constructor.
+  template <typename... Elems>
+  unit(Elems... elems)
+    : MatrixT{normalized({std::forward<Elems>(elems)...})} {}
 
   auto norm() -> decltype(std::declval<MatrixT>().norm()) {
     return 1.0;
@@ -52,6 +55,15 @@ public:
 
   auto squaredNorm() -> decltype(std::declval<MatrixT>().squaredNorm()) {
     return 1.0;
+  }
+
+private:
+  auto normalized(MatrixT const& v) -> MatrixT {
+    double const norm_2{v.squaredNorm()};
+    if (double_neq(norm_2, 0.0))
+      return v / std::sqrt(norm_2);
+    else
+      throw std::invalid_argument{"unit: Given a zero vector"};
   }
 };
 
@@ -72,13 +84,17 @@ auto cos_angle(
 ) -> decltype(u.dot(v)) 
 { return (u.dot(v)) / (u.norm() * v.norm()); }
 
+// Get any vector perpendicular to the given one.
+auto get_any_orthogonal(unit3 const& v) -> unit3;
+
 // Rays -----------------------------------------------------------------------
 
-// A ray is defined by its origin and direction. Rays are immutable.
+// A ray is defined by its origin and direction. Rays are immutable. Direction
+// needn't be a unit vector in order to allow transformations of the ray.
 class ray {
 public:
   // Construction...
-  ray(vector3 const& origin, unit3 const& dir)
+  ray(vector3 const& origin, vector3 const& dir)
     : origin_{origin}
     , direction_{dir} { }
 
@@ -87,16 +103,19 @@ public:
     return origin_; 
   }
 
-  auto direction() const noexcept -> unit3 {
+  auto direction() const noexcept -> vector3 {
     return direction_; 
   }
 
 private:
   vector3 origin_;
-  unit3   direction_;
+  vector3 direction_;
 };
 
 auto operator << (std::ostream& out, ray const& ray) -> std::ostream&;
+
+// Transform a ray by an affine matrix.
+auto transform(ray const& ray, Eigen::Affine3d const& tr) -> oxatrace::ray;
 
 // Given a parametric ray r(t), compute r(t).
 // Throws:
@@ -123,8 +142,6 @@ private:
   mutable boost::optional<vector3> point_;
 };
 
-
-}
+}  // namespace oxatrace
 
 #endif
-

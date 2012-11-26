@@ -16,170 +16,96 @@
 
 using namespace oxatrace;
 
-sphere::sphere(vector3 const& center, double radius)
-  : center_{center}
-  , radius_{radius} { 
-  if (radius <= 0.0) throw std::logic_error("sphere: radius <= 0.0");
-}
-
-auto sphere::intersect(ray const& r) const -> intersection_list {
-  // Let c denote the centre and r the radius. This sphere is defined by the
-  // equation ||x - c|| = r. Let o := r.origin(), d:= r.direction(), the ray is 
-  // then described as x = o + td, (forall t > 0).
+auto sphere::intersect(ray const& ray) const -> intersection_list {
+  // This sphere is defined by the equation ||x|| = 1. Let o := r.origin(), d:=
+  // r.direction(), the ray is then described as x = o + td, (forall t > 0).
   //
   // Substituting the ray equation into the sphere definition gives
   //
-  //   ||o + td - c|| = r.
+  //                            ||o + td|| = 1.
   //
-  // Define for simplicity a := o - c, Since both sides are non-negative and ‖.‖ 
-  // denotes the Euclidian norm, we have
+  // Since both sides are non-negative and ||.|| denotes the Euclidean norm, we
+  // have
   //
-  //                        ||a + td|| = r
-  //                      ||a + td||^2 = r^2
-  //                        (a + td)^2 = r^2
-  //            a^2 + 2t(ad) + t^2 d^2 = r^2
-  //    t^2 d^2 + t(2ad) + (a^2 - r^2) = 0
-  //        t^2 + t(2ad) + (a^2 - r^2) = 0,
+  //                                        ||o + td|| = 1
+  //                                      ||o + td||^2 = 1
+  //                                  <o + td, o + td> = 1
+  //                    <o, o> + 2t<o, d> + t^2 <d, d> = 1
+  //              t^2 ||d||^2 + 2t<o, d> + ||o||^2 - 1 = 0,
   //
-  // a quadratic equation in t. (Here v^2, where v is a vector, is the scalar
-  // product of v with itself.) The last line follows from the fact that
-  // d^2 = 1, since d is a unit vector.
+  // a quadratic equation in t.
   //
   // Solving the equation for t gives us the solutions
   //
-  //        1           ______________________
-  //   t = --- (-2ad ± √4(ad)^2 - 4(a^2 - r^2)
-  //        2
+  //                 1                   ___________________________________
+  //        t = ----------- (-2<o, d> ± √4<o, d>^2 - 4 ||d||^2 (||o||^2 - 1))
+  //             2 ||d||^2
   //
-  //        1            ____________________
-  //     = --- (-2ad ± 2√(ad)^2 - (a^2 - r^2)
-  //        2
-  //              ____________________
-  //     = -ad ± √(ad)^2 - (a^2 - r^2)
-  // 
+  //                 1                    ________________________________
+  //          = ----------- (-2<o, d> ± 2√<o, d>^2 - ||d||^2 (||o||^2 - 1))
+  //             2 ||d||^2
+  //
+  //                1                 ________________________________
+  //          = --------- (-<o, d> ± √<o, d>^2 - ||d||^2 (||o||^2 - 1))
+  //             ||d||^2
+  //
   // All real and nonnegative t's are then the sought parameters of intersection
   // for the ray formula.
-  
-  vector3 const a    = r.origin() - center_;
-  double const  a_2  = a.squaredNorm();
-  double const  ad   = a.dot(r.direction());
-  double const  ad_2 = ad * ad;
-  double const  r_2  = radius_ * radius_;
-  double const  D    = ad_2 - (a_2 - r_2);
+
+  double const od   = ray.origin().dot(ray.direction());
+  double const od_2 = od * od;
+  double const d_2  = ray.direction().squaredNorm();
+  double const o_2  = ray.origin().squaredNorm();
+  double const D    = od_2 - d_2 * (o_2 - 1);
 
   if (D < 0.0) return {};
 
   double const sqrt_D = std::sqrt(D);
-  double t_1          = -ad + sqrt_D;
-  double t_2          = -ad - sqrt_D;
+  double const t_1    = (-od - sqrt_D) / d_2;
+  double const t_2    = (-od + sqrt_D) / d_2;
 
-  // Sort t_1, t_2.
-  if (t_1 > t_2) std::swap(t_1, t_2);
   assert(t_1 <= t_2);
+  assert(t_1 <= EPSILON || double_eq(point_at(ray, t_1).norm(), 1.0));
+  assert(t_2 <= EPSILON || double_eq(point_at(ray, t_2).norm(), 1.0));
 
-  if (D > EPSILON) {
-    // At most two solutions.
-    if (t_1 > EPSILON)      return {t_1, t_2};
-    else if (t_2 > EPSILON) return {t_2};
-    else                    return {};
-  } else {
-    // At most one solution.
-    if (t_1 > EPSILON) return {t_1};
-    else               return {};
-  }
-  // Case of D < 0.0 was already handled.
+  // Ignore intersections that are too close to zero. The origin itself isn't
+  // to be considered a part of the ray, and values close to it may result
+  // as a consequence of floating-point arithmetic.
+
+  if (t_1 > EPSILON)      return {t_1, t_2};
+  else if (t_2 > EPSILON) return {t_2};
+  else                    return {};
 }
 
 auto sphere::normal_at(ray_point const& rp) const -> unit<vector3> {
-  // We have to decide the sign of the result based on whether the ray 
-  // originates within the sphere or outside it, so that a hit "straight on"
-  // the sphere (perpendicular to the surface) will always generate a normal
-  // vector that points directly toward the origin.
-  
-  if ((rp.ray().origin() - center_).squaredNorm() > radius_ * radius_)
-    return rp.point() - center_;                                  // If outside
-  else
-    return center_ - rp.point();
+  return rp.point();
 }
-
-plane::plane(vector3 const& point, vector3 const& u, vector3 const& v)
-try
-  : point_{point}
-  , normal_{u.cross(v)} { }
-catch (std::invalid_argument&) {
-  // This must have been thrown from unit<>'s constructor because normal_
-  // was initialized by a zero vector, which must be because u, v are colinear.
-  throw std::invalid_argument{"plane: u, v linearly dependent"};
-}
-
-plane::plane(vector3 const& point, unit<vector3> const& normal)
-  : point_{point}
-  , normal_{normal} { }
 
 auto plane::intersect(ray const& ray) const -> intersection_list {
-  // Our plane is defined by the equation
+  // Since this is an xy plane, we're solving the equation o_z + td_z = 0,
+  // where o_z and d_z are the z components of the ray origin and direction
+  // respectively. The solution is t = -o_z / d_z.
   //
-  //   <x - P, N> = 0,
-  //
-  // P being the given point on the plane, N the normal. Setting 
-  // o := ray.origin(), d := ray.direction(), we can plug in the ray equation
-  // and obtain
-  //
-  //   <o + td - P, N> = 0.
-  //
-  // Let us set a := o - P, to simplify the equation into
-  //
-  //        <a + td, N> = 0
-  //   <a, N> + <td, N> = 0
-  //            t<d, N> = -<a, N>
-  //                       -<a, N>
-  //                  t = ---------.
-  //                        <d, N>
-  //
-  // The case when <d, N> = 0 corresponds to the situation where the ray is
-  // parallel with the plane. We have no intersection in that case.
-  //
-  // Also notable is the case of <a, N> = 0, or <o - P, N> = 0 which happens
-  // when the ray originates on the plane. Then two possibilities arise: 
-  // Either 1) the ray goes somewhere out of the plane, and its origin
-  // is the only common point with the plane; or 2) the ray is completely
-  // embedded in the plane. In both cases we're going to report that no
-  // intersection happens. In case 1) that is actually true (if we don't 
-  // consider ray.origin() to be a part of the ray), in case 2) it is very 
-  // false, but for ray tracing purposes it makes much more sense.
-  //
+  // The case of d_z = 0 corresponds to the case of a ray parallel to the plane
+  // or embedded in the plane. In both cases we will report that there is no
+  // intersection.
 
-  vector3 const a = ray.origin() - point_;
-  double const aN = a.dot(normal_);
-  double const dN = ray.direction().dot(normal_);
+  if (double_eq(ray.direction().z(), 0.0)) return {};
 
-  if (double_eq(dN, 0.0)) return {};  // Test for ray parallel to the plane.
-
-  double const t  = -aN / dN;
-
-  if (t > EPSILON)
-    return {t};
-  else
-    return {};
+  double const t = -ray.origin().z() / ray.direction().z();
+  if (t > EPSILON) return {t};
+  else             return {};
 }
 
 auto plane::normal_at(ray_point const& rp) const -> unit<vector3> {
-  // We want to get the normal pointing into the half-space containing 
-  // o := ray.origin(). We have two half-spaces here, <o - P, N> < 0, and
-  // <o - P, N> > 0, and two possible answers: N and -N. We know that the answer
-  // N corresponds to the half-space <o - P, N> > 0 (the angle between the 
-  // normal and the vector x - P is less than 90 degrees if it lies within the
-  // normal vector's half-space).
-  //
-  // The question then is simple: Is <o - P, N> > 0? With x being the given
-  // point on ray.
-
-  double const cos_alpha{cos_angle(rp.ray().origin() - point_, normal_)};
-
-  if (cos_alpha >= 0.0)  // The case cos_alpha == 0.0 should be handled 
-    return normal_;      // *somehow* as well.
+  // We need to consider the ray origin here in order to determine the "sign"
+  // of the result: Plane can be viewed both from the front and from the behind,
+  // and no way is "inside" or "outside".
+  
+  if (rp.ray().origin().z() > 0.0)  // Hit from the front.
+    return -vector3::UnitZ();
   else
-    return -normal_;
+    return vector3::UnitZ();
 }
 
 material::material(color const& ambient, double diffuse, double specular,
@@ -232,14 +158,72 @@ auto material::illuminate(
 }
 
 solid::solid(std::shared_ptr<oxatrace::shape> const& s, oxatrace::material mat)
-  : shape_{std::move(s)}
-  , material_{mat} { }
-
-auto solid::shape() const noexcept -> oxatrace::shape const& {
-  return *shape_;
-}
+  : shape_{s}
+  , material_{mat}
+  , world_to_object_{Eigen::Affine3d::Identity()}
+  , object_to_world_{Eigen::Affine3d::Identity()} { }
 
 auto solid::material() const noexcept -> oxatrace::material const& {
   return material_;
 }
 
+auto solid::intersect(ray const& ray) const -> shape::intersection_list {
+  oxatrace::ray const object_ray = oxatrace::transform(ray, world_to_object_);
+  return shape_->intersect(object_ray);
+}
+
+auto solid::normal_at(ray_point const& rp) const -> unit3 {
+  vector3 const local_normal = shape_->normal_at(
+    {oxatrace::transform(rp.ray(), world_to_object_), rp.param()}
+  );
+  return object_to_world_.linear().transpose() * local_normal;
+}
+
+auto solid::translate(vector3 const& tr) -> solid& {
+  object_to_world_.pretranslate(tr);
+  world_to_object_.translate(-tr);
+  return *this;
+}
+
+auto solid::scale(double coef) -> solid& {
+  if (coef < EPSILON)
+    throw std::invalid_argument{"solid::scale: coef <= 0"};
+
+  object_to_world_.prescale(coef);
+  world_to_object_.scale(1. / coef);
+  return *this;
+}
+
+auto solid::scale(double x, double y, double z) -> solid& {
+  if (x < EPSILON || y < EPSILON || z < EPSILON)
+    throw std::invalid_argument{"solid::scale: x, y, or z <= 0.0"};
+  
+  vector3 const scale_vec{x, y, z};
+  vector3 const scale_vec_rec{1. / x, 1. / y, 1. / z};
+  
+  object_to_world_.prescale(scale_vec);
+  world_to_object_.scale(scale_vec_rec);
+  
+  return *this;
+}
+
+auto solid::rotate(Eigen::AngleAxisd const& rot) -> solid& {
+  object_to_world_.prerotate(rot);
+  world_to_object_.rotate(rot.inverse());
+  return *this;
+}
+
+auto solid::transform(Eigen::Affine3d const& tr,
+                      Eigen::Affine3d const& inverse) -> solid& {
+  assert((tr * inverse).isApprox(Eigen::Affine3d::Identity()));
+
+  object_to_world_ = tr * object_to_world_;
+  world_to_object_ = world_to_object_ * inverse;
+
+  return *this;
+}
+
+auto solid::transform(Eigen::Affine3d const& tr) -> solid& {
+  Eigen::Affine3d inverse = tr.inverse();
+  return transform(tr, inverse);
+}

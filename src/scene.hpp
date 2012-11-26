@@ -49,8 +49,8 @@ private:
   // Helper to allow syntax in the style of for (light const& l : sc.lights())
   class lights_proxy {
   public:
-    auto begin() const noexcept -> light_iterator { return sc_.lights_begin();}
-    auto end() const noexcept -> light_iterator { return sc_.lights_end(); }
+    auto begin() const noexcept -> light_iterator { return sc_.lights_begin(); }
+    auto end() const noexcept -> light_iterator   { return sc_.lights_end(); }
 
   private:
     friend class scene;
