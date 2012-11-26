@@ -10,13 +10,16 @@ color   = ARGUMENTS.get('color', 1)
 ## Environments
 ##
 
+import build_config
+
 defaultEnv = Environment(tools=['gcc', 'mingw'])
 defaultEnv.Append(CCFLAGS=[
   '-Wall', '-Wextra', '-std=c++11', '-pedantic', '-pthread'
 ])
 defaultEnv.Append(LINKFLAGS=['-pthread'])
 defaultEnv.Append(LIBS=['png', 'm'])
-defaultEnv.Append(CPPPATH=['./eigen'])
+defaultEnv.Append(CPPPATH=build_config.include_search_path)
+defaultEnv.Append(LIBPATH=build_config.lib_search_path)
 
 if not verbose:
   defaultEnv.Replace(ARCOMSTR='Archiving $TARGET')
