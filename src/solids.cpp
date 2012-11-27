@@ -77,7 +77,7 @@ auto sphere::intersect(ray const& ray) const -> intersection_list {
   else                    return {};
 }
 
-auto sphere::normal_at(ray_point const& rp) const -> unit<vector3> {
+auto sphere::normal_at(ray_point const& rp) const -> unit3 {
   return rp.point();
 }
 
@@ -97,7 +97,7 @@ auto plane::intersect(ray const& ray) const -> intersection_list {
   else             return {};
 }
 
-auto plane::normal_at(ray_point const& rp) const -> unit<vector3> {
+auto plane::normal_at(ray_point const& rp) const -> unit3 {
   // We need to consider the ray origin here in order to determine the "sign"
   // of the result: Plane can be viewed both from the front and from the behind,
   // and no way is "inside" or "outside".
