@@ -13,6 +13,7 @@ color   = ARGUMENTS.get('color', 1)
 import build_config
 
 defaultEnv = Environment(tools=['gcc', 'mingw'])
+defaultEnv.Replace(CXX='clang++')
 defaultEnv.Append(CCFLAGS=[
   '-Wall', '-Wextra', '-std=c++11', '-pedantic', '-pthread'
 ])

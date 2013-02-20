@@ -43,15 +43,15 @@ public:
 // Unit sphere centered around the origin.
 class sphere final : public shape {
 public:
-  virtual auto intersect(ray const&) const override -> intersection_list;
-  virtual auto normal_at(ray_point const&) const override -> unit3;
+  virtual auto intersect(ray const&) const -> intersection_list override;
+  virtual auto normal_at(ray_point const&) const -> unit3 override;
 };
 
 // The xy plane.
 class plane final : public shape {
 public:
-  virtual auto intersect(ray const&) const override -> intersection_list;
-  virtual auto normal_at(ray_point const&) const override -> unit3;
+  virtual auto intersect(ray const&) const -> intersection_list override;
+  virtual auto normal_at(ray_point const&) const -> unit3 override;
 };
 
 // Materials -------------------------------------------------------------------

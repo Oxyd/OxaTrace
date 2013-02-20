@@ -98,10 +98,10 @@ class simple_scene final : public scene {
 public:
   static auto make(scene_definition def) -> std::unique_ptr<simple_scene>;
 
-  virtual auto intersect_solid(ray const& r) const override
-    -> boost::optional<intersection>;
-  virtual auto lights_begin() const noexcept override -> light_iterator;
-  virtual auto lights_end() const noexcept override -> light_iterator;
+  virtual auto intersect_solid(ray const& r) const 
+    -> boost::optional<intersection> override;
+  virtual auto lights_begin() const noexcept -> light_iterator override;
+  virtual auto lights_end() const noexcept   -> light_iterator override;
 
 private:
   explicit simple_scene(scene_definition def);

@@ -8,6 +8,17 @@
 
 namespace oxatrace {
 
+// We want somehow to incorporate gamma correction and exposure here. Ray
+// tracing will give us an HDR image -- floating-point values ranging from 0.0
+// to an arbitrary maximum. However, we want to output an LDR image. To do that,
+// we are going to need to compress the [0, inf) floating-point range into an
+// [0, 256) integer range.
+//
+// Going from [0, inf) to [0, 256) is called tone mapping. There are various
+// ways to go about tone mapping; implemented in this program is an "exposure"
+// operator that simulates the exposure of the photo-sensitive film used in
+// classical cameras.
+
 // Image is a 2D array of colours. The particular meaning of the channels'
 // values is still unspecified at this point.
 class image {

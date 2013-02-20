@@ -200,7 +200,7 @@ auto solid::scale(double x, double y, double z) -> solid& {
   
   vector3 const scale_vec{x, y, z};
   vector3 const scale_vec_rec{1. / x, 1. / y, 1. / z};
-  
+
   object_to_world_.prescale(scale_vec);
   world_to_object_.scale(scale_vec_rec);
   

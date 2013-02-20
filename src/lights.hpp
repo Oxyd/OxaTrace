@@ -12,7 +12,8 @@ namespace oxatrace {
 // to determine the illumination of an object.
 //
 // Intensity of this light source is implicitly defined by the given colour.
-struct light {
+class light {
+public:
   virtual ~light() { }
 
   // Get a point in the light.
@@ -29,8 +30,8 @@ public:
   // Construct a point light from the position of its only point and its colour.
   point_light(vector3 const& pos, oxatrace::color const& col);
 
-  virtual auto get_source() const override -> vector3;
-  virtual auto color() const override -> oxatrace::color;
+  virtual auto get_source() const -> vector3         override;
+  virtual auto color() const      -> oxatrace::color override;
 
 private:
   vector3         position_;
