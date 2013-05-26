@@ -17,8 +17,10 @@
 using namespace oxatrace;
 
 auto sphere::intersect(ray const& ray) const -> intersection_list {
-  // This sphere is defined by the equation ||x|| = 1. Let o := r.origin(), d:=
-  // r.direction(), the ray is then described as x = o + td, (forall t > 0).
+  // This sphere is defined by the equation ||x|| = 1. Let o := r.origin(), 
+  // d := r.direction(), the ray is then described as 
+  //
+  //                       x = o + td, (forall t > 0).
   //
   // Substituting the ray equation into the sphere definition gives
   //

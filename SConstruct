@@ -10,12 +10,16 @@ color   = ARGUMENTS.get('color', 1)
 ## Environments
 ##
 
+import os
 import build_config
 
-defaultEnv = Environment(tools=['gcc', 'mingw'])
-defaultEnv.Replace(CXX='clang++')
+defaultEnv = Environment(ENV={'PATH' : os.environ['PATH']},
+                         tools=['gcc', 'mingw'])
+defaultEnv.Replace(CXX='g++-4.8')
 defaultEnv.Append(CCFLAGS=[
-  '-Wall', '-Wextra', '-std=c++11', '-pedantic', '-pthread'
+  '-Wall', '-Wextra', 
+  '-Wno-unused-local-typedefs',  # Suppress warnings in Eigen.
+  '-std=c++11', '-pedantic', '-pthread'
 ])
 defaultEnv.Append(LINKFLAGS=['-pthread'])
 defaultEnv.Append(LIBS=['png', 'm'])
