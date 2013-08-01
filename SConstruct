@@ -13,9 +13,7 @@ color   = ARGUMENTS.get('color', 1)
 import os
 import build_config
 
-defaultEnv = Environment(ENV={'PATH' : os.environ['PATH']},
-                         tools=['gcc', 'mingw'])
-defaultEnv.Replace(CXX='g++-4.8')
+defaultEnv = Environment(ENV={'PATH' : os.environ['PATH']})
 defaultEnv.Append(CCFLAGS=[
   '-Wall', '-Wextra', 
   '-Wno-unused-local-typedefs',  # Suppress warnings in Eigen.
@@ -69,19 +67,13 @@ Default(oxatrace)
 ##
 
 # Need to build Google Test so that the unit tests can link with it.
-gtestEnv = env.Clone()
-gtestEnv.Append(CPPPATH=['gtest', 'gtest/include'])
-
-gtest = gtestEnv.Library(source='gtest/src/gtest-all.cc',
-                         target='gtest/gtest')
-
 tests = ['math_test', 'solids_test', 'scene_test', 'image_test', 'color_test']
 
 import subprocess
 testsEnv = env.Clone()
 testsEnv.VariantDir('tests-build', 'src', duplicate=0)
-testsEnv.Append(CPPPATH=['src', 'gtest/include'])
-testsEnv.Append(LIBS=[gtest])
+testsEnv.Append(CPPPATH=['src'])
+testsEnv.Append(LIBS=['gtest'])
 
 import os
 progObjects = testsEnv.Glob('tests-build/*.cpp', strings=True)
@@ -90,7 +82,6 @@ progObjects.remove(os.path.join('tests-build', 'main.cpp'))
 def _runTest(env, target, source):
   executable = str(source[0].abspath)
   cmdline = [executable]
-  if color != '0': cmdline.append('--gtest_color=yes')
   if not subprocess.call(cmdline):
     file(str(target[0]), 'w').write('OK\n')
 runTest = Action(_runTest, 'Running $SOURCE')
@@ -105,3 +96,5 @@ for test in tests:
   Alias(test, stamp)
 
 Alias('tests', tests)
+
+# vim:syntax=python

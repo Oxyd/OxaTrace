@@ -17,10 +17,12 @@ public:
   virtual ~light() { }
 
   // Get a point in the light.
-  virtual auto get_source() const -> vector3 = 0;
+  virtual vector3
+  get_source() const = 0;
 
   // Get the colour of this light.
-  virtual auto color() const -> oxatrace::color = 0;
+  virtual oxatrace::color
+  color() const = 0;
 };
 
 // Point light source is a simple model where all light is emitted from a single
@@ -30,8 +32,11 @@ public:
   // Construct a point light from the position of its only point and its colour.
   point_light(vector3 const& pos, oxatrace::color const& col);
 
-  virtual auto get_source() const -> vector3         override;
-  virtual auto color() const      -> oxatrace::color override;
+  virtual vector3
+  get_source() const override;
+
+  virtual oxatrace::color
+  color() const override;
 
 private:
   vector3         position_;

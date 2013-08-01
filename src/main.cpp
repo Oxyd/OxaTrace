@@ -9,7 +9,8 @@
 
 #include <typeinfo>
 
-auto main(int argc, char** argv) -> int {
+int
+main(int argc, char** argv) {
   if (argc != 2) {
     std::cerr << "Expected a filename, sorry.\n";
     return EXIT_FAILURE;
@@ -41,11 +42,11 @@ auto main(int argc, char** argv) -> int {
     std::make_shared<point_light>(vector3{-6.0, 10.0, 8.0},
                                   color{1.0, 0.8, 0.8})
   );
-
+  
   std::unique_ptr<scene> sc{simple_scene::make(std::move(def))};
   camera cam{vector3{3.0, 3.5, 8.0}, unit3{-0.2, -0.3, -0.7},
              unit3{0.0, 1.0, 0.0}, 640, 480, PI / 2.0};
-
+  
   std::cout << "Tracing rays...\n";
   
   image result{640, 480};
@@ -53,15 +54,15 @@ auto main(int argc, char** argv) -> int {
     for (image::index x = 0; x < result.width(); ++x) {
       double const cam_u = double(x) / double(result.width());
       double const cam_v = double(y) / double(result.height());
-
+      
       ray const r = cam.make_ray(cam_u, cam_v);
-
+      
       boost::optional<scene::intersection> i = sc->intersect_solid(r);
       if (!i) {
         result.pixel_at(x, y) = {0.0, 0.0, 0.0};
         continue;
       }
-
+      
       color result_pixel{i->solid().material().base_color()};
       for (light const& l : sc->lights()) {
         unit<vector3> const light_dir = {l.get_source() - i->position()};

@@ -37,24 +37,31 @@ public:
   image(index width, index height);
 
   // Observers...
-  auto width() const  -> index { return width_; }
-  auto height() const -> index { return pixels_.size() / width(); }
+  index width() const   { return width_; }
+  index height() const  { return pixels_.size() / width(); }
 
   // Pixel access...
-  auto begin() -> pixel_iterator { return pixels_.begin(); }
-  auto end()   -> pixel_iterator { return pixels_.end(); }
-  auto begin() const -> const_pixel_iterator {
+  pixel_iterator
+  begin()   { return pixels_.begin(); }
+  pixel_iterator
+  end()     { return pixels_.end(); }
+
+  const_pixel_iterator
+  begin() const {
     return pixels_.begin();
   }
-  auto end() const -> const_pixel_iterator {
+  const_pixel_iterator
+  end() const {
     return pixels_.end();
   }
 
   // Get pixel at given coordinates.
   // Throws:
   //   -- std::logic_error: Coordinates out of bounds.
-  auto pixel_at(index x, index y)       -> color&;
-  auto pixel_at(index x, index y) const -> color const&;
+  color&
+  pixel_at(index x, index y);
+  color const&
+  pixel_at(index x, index y) const;
 
 private:
   pixel_list  pixels_;
@@ -64,7 +71,8 @@ private:
 // Save an image into a PNG file.
 // Throws:
 //   -- std::ios_base::failure: I/O error.
-void save(image const& image, std::string const& filename);
+void
+save(image const& image, std::string const& filename);
  
 } // namespace oxatrace
 

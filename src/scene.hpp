@@ -28,11 +28,11 @@ public:
   void add_light(std::shared_ptr<light> const& l);
 
   // Observers...
-  auto solids_begin() const noexcept -> solid_iterator;
-  auto solids_end() const noexcept   -> solid_iterator;
+  solid_iterator solids_begin() const noexcept;
+  solid_iterator solids_end() const noexcept;
 
-  auto lights_begin() const noexcept -> light_iterator;
-  auto lights_end() const noexcept   -> light_iterator;
+  light_iterator lights_begin() const noexcept;
+  light_iterator lights_end() const noexcept;
 
 private:
   solid_list solids_;
@@ -49,13 +49,17 @@ private:
   // Helper to allow syntax in the style of for (light const& l : sc.lights())
   class lights_proxy {
   public:
-    auto begin() const noexcept -> light_iterator { return sc_.lights_begin(); }
-    auto end() const noexcept -> light_iterator   { return sc_.lights_end(); }
+    light_iterator
+    begin() const noexcept  { return sc_.lights_begin(); }
+    light_iterator
+    end() const noexcept    { return sc_.lights_end(); }
 
   private:
     friend class scene;
     scene const& sc_;
-    explicit lights_proxy(scene const& sc) noexcept : sc_(sc) { }
+
+    explicit
+    lights_proxy(scene const& sc) noexcept : sc_(sc) { }
   };
 
 public:
@@ -67,9 +71,14 @@ public:
   public:
     intersection(ray_point const& rp, oxatrace::solid const& s);
 
-    auto position() const -> vector3;
-    auto solid() const    -> oxatrace::solid const& { return solid_; }
-    auto normal() const   -> unit<vector3>;
+    vector3
+    position() const;
+
+    oxatrace::solid const&
+    solid() const { return solid_; }
+
+    unit<vector3>
+    normal() const;
 
   private:
     ray_point       ray_point_;
@@ -81,30 +90,39 @@ public:
   // Returns:
   //   -- closest intersection, or
   //   -- nothing: the ray does not intersect any solid in the scene.
-  virtual auto intersect_solid(ray const& r) const
-    -> boost::optional<intersection> = 0;
+  virtual boost::optional<intersection>
+  intersect_solid(ray const& r) const = 0;
 
   // Access to the list of lights in the scene...
-  virtual auto lights_begin() const noexcept -> light_iterator = 0;
-  virtual auto lights_end() const noexcept -> light_iterator = 0;
-  auto lights() const noexcept -> lights_proxy {
-    return lights_proxy(*this);
-  }
+  virtual light_iterator
+  lights_begin() const noexcept = 0;
+
+  virtual light_iterator
+  lights_end() const noexcept = 0;
+
+  lights_proxy
+  lights() const noexcept { return lights_proxy(*this); }
 };
 
 // Simple scene is the most basic implementation of scene with no acceleration
 // structure.
 class simple_scene final : public scene {
 public:
-  static auto make(scene_definition def) -> std::unique_ptr<simple_scene>;
+  static std::unique_ptr<simple_scene>
+  make(scene_definition def);
 
-  virtual auto intersect_solid(ray const& r) const 
-    -> boost::optional<intersection> override;
-  virtual auto lights_begin() const noexcept -> light_iterator override;
-  virtual auto lights_end() const noexcept   -> light_iterator override;
+  virtual boost::optional<intersection>
+  intersect_solid(ray const& r) const override;
+
+  virtual light_iterator
+  lights_begin() const noexcept override;
+
+  virtual light_iterator
+  lights_end() const noexcept override;
 
 private:
-  explicit simple_scene(scene_definition def);
+  explicit
+  simple_scene(scene_definition def);
 
   scene_definition definition_;
 };

@@ -6,27 +6,33 @@
 
 using namespace oxatrace;
 
-void scene_definition::add_solid(solid s) {
+void
+scene_definition::add_solid(solid s) {
   solids_.push_back(std::move(s));
 }
 
-void scene_definition::add_light(std::shared_ptr<light> const& l) {
+void
+scene_definition::add_light(std::shared_ptr<light> const& l) {
   lights_.push_back(l);
 }
 
-auto scene_definition::solids_begin() const noexcept -> solid_iterator {
+auto
+scene_definition::solids_begin() const noexcept -> solid_iterator {
   return solids_.begin();
 }
 
-auto scene_definition::solids_end() const noexcept -> solid_iterator {
+auto
+scene_definition::solids_end() const noexcept -> solid_iterator {
   return solids_.end();
 }
 
-auto scene_definition::lights_begin() const noexcept -> light_iterator {
+auto
+scene_definition::lights_begin() const noexcept -> light_iterator {
   return lights_.begin();
 }
 
-auto scene_definition::lights_end() const noexcept -> light_iterator {
+auto
+scene_definition::lights_end() const noexcept -> light_iterator {
   return lights_.end();
 }
 
@@ -35,22 +41,25 @@ scene::intersection::intersection(ray_point const& rp,
   : ray_point_{rp}
   , solid_{s} { }
 
-auto scene::intersection::position() const -> vector3 {
+vector3
+scene::intersection::position() const {
   return ray_point_.point();
 }
 
-auto scene::intersection::normal() const -> unit<vector3> {
+unit<vector3>
+scene::intersection::normal() const {
   if (!normal_)
     normal_ = solid_.normal_at(ray_point_);
   return *normal_;
 }
 
-auto simple_scene::make(scene_definition def) -> std::unique_ptr<simple_scene> {
+std::unique_ptr<simple_scene>
+simple_scene::make(scene_definition def) {
   return std::unique_ptr<simple_scene>{new simple_scene(std::move(def))};
 }
 
-auto simple_scene::intersect_solid(ray const& ray) const
-  -> boost::optional<intersection> {
+boost::optional<simple_scene::intersection>
+simple_scene::intersect_solid(ray const& ray) const {
   boost::optional<intersection> result;
   double min_param{std::numeric_limits<double>::max()};
 
@@ -79,11 +88,13 @@ auto simple_scene::intersect_solid(ray const& ray) const
 simple_scene::simple_scene(scene_definition def)
   : definition_{def} { }
 
-auto simple_scene::lights_begin() const noexcept -> light_iterator {
+auto
+simple_scene::lights_begin() const noexcept -> light_iterator {
   return definition_.lights_begin();
 }
 
-auto simple_scene::lights_end() const noexcept -> light_iterator {
+auto
+simple_scene::lights_end() const noexcept -> light_iterator {
   return definition_.lights_end();
 }
 

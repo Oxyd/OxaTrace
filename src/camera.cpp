@@ -86,7 +86,8 @@ camera::camera(vector3 center, unit3 view, unit3 up,
     film_center - (1.0 / 2.0) * (film_u_axis_ + film_v_axis_);
 }
 
-auto camera::make_ray(double u, double v) const -> ray {
+ray
+camera::make_ray(double u, double v) const {
   if (u < 0.0 || v < 0.0 || u >= 1.0 || v >= 1.0)
     throw std::out_of_range{"camera::make_ray: (u, v) out of range"};
 

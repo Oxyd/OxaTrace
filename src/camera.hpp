@@ -32,7 +32,8 @@ public:
   // Ray generation...
   // Throws:
   //   -- std::out_of_range: (u, v) not in [0, 1]².
-  auto make_ray(double u, double v) const -> ray;
+  ray
+  make_ray(double u, double v) const;
 
 private:
   vector3 pin_center_;      // World position of the infinitesimal pinhole.

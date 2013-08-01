@@ -16,18 +16,21 @@ image::image(std::size_t w, std::size_t h)
   : pixels_{w * h}
   , width_{w} { }
 
-auto image::pixel_at(std::size_t x, std::size_t y) -> color& {
+color&
+image::pixel_at(std::size_t x, std::size_t y) {
   return const_cast<color&>(const_cast<image const*>(this)->pixel_at(x, y));
 }
 
-auto image::pixel_at(std::size_t x, std::size_t y) const -> color const& {
+color const&
+image::pixel_at(std::size_t x, std::size_t y) const {
   if (x < width_ && x * y < pixels_.size())
     return pixels_[y * width_ + x];
   else
     throw std::logic_error{"image::pixel_at: Invalid coordinates"};
 }
 
-void oxatrace::save(image const& image, std::string const& filename) {
+void
+oxatrace::save(image const& image, std::string const& filename) {
   // We're going to copy the image over into a new one that Boost.GIL can 
   // understand. We're then going to save the copy. It appears to be easier
   // this way than trying to force Boost.GIL to understand oxatrace::image...

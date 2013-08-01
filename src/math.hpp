@@ -13,22 +13,28 @@
 
 namespace oxatrace {
 
-// Numbers --------------------------------------------------------------------
+//
+// Numbers
+//
 
 constexpr double PI{3.141592};
 constexpr double EPSILON{1e-8};
 
 // Return true iff the two given doubles differ by less than EPSILON.
-inline auto double_eq(double a, double b) -> bool {
+inline bool
+double_eq(double a, double b) {
   return std::fabs(a - b) < EPSILON;
 }
 
 // Return true iff the two given doubles differ by at least EPSILON.
-inline auto double_neq(double a, double b) -> bool {
+inline bool
+double_neq(double a, double b) {
   return !double_eq(a, b);
 }
 
-// Vectors & Matrices ---------------------------------------------------------
+//
+// Vectors & Matrices
+//
 
 template <typename MatrixT>
 class unit : public MatrixT {
@@ -49,16 +55,19 @@ public:
   unit(Elems... elems)
     : MatrixT{normalized({std::forward<Elems>(elems)...})} {}
 
-  auto norm() -> decltype(std::declval<MatrixT>().norm()) {
+  auto
+  norm() -> decltype(std::declval<MatrixT>().norm()) {
     return 1.0;
   }
 
-  auto squaredNorm() -> decltype(std::declval<MatrixT>().squaredNorm()) {
+  auto
+  squaredNorm() -> decltype(std::declval<MatrixT>().squaredNorm()) {
     return 1.0;
   }
 
 private:
-  auto normalized(MatrixT const& v) -> MatrixT {
+  MatrixT
+  normalized(MatrixT const& v) {
     double const norm_2{v.squaredNorm()};
     if (double_neq(norm_2, 0.0))
       return v / std::sqrt(norm_2);
@@ -72,7 +81,8 @@ using unit3   = unit<vector3>;
 
 // Get the cosine of the directed angle from v to u.
 template <typename Base1, typename Base2>
-auto cos_angle(
+auto
+cos_angle(
   Eigen::MatrixBase<Base1> const& v,
   Eigen::MatrixBase<Base2> const& u,
   typename std::enable_if<
@@ -85,9 +95,12 @@ auto cos_angle(
 { return (u.dot(v)) / (u.norm() * v.norm()); }
 
 // Get any vector perpendicular to the given one.
-auto get_any_orthogonal(unit3 const& v) -> unit3;
+unit3
+get_any_orthogonal(unit3 const& v);
 
-// Rays -----------------------------------------------------------------------
+//
+// Rays
+//
 
 // A ray is defined by its origin and direction. Rays are immutable. Direction
 // needn't be a unit vector in order to allow transformations of the ray.
@@ -99,11 +112,13 @@ public:
     , direction_{dir} { }
 
   // Observers...
-  auto origin() const noexcept -> vector3 {
+  vector3
+  origin() const noexcept {
     return origin_; 
   }
 
-  auto direction() const noexcept -> vector3 {
+  vector3
+  direction() const noexcept {
     return direction_; 
   }
 
@@ -112,15 +127,18 @@ private:
   vector3 direction_;
 };
 
-auto operator << (std::ostream& out, ray const& ray) -> std::ostream&;
+std::ostream&
+operator << (std::ostream& out, ray const& ray);
 
 // Transform a ray by an affine matrix.
-auto transform(ray const& ray, Eigen::Affine3d const& tr) -> oxatrace::ray;
+oxatrace::ray
+transform(ray const& ray, Eigen::Affine3d const& tr);
 
 // Given a parametric ray r(t), compute r(t).
 // Throws:
 //   -- std::logic_error: When t is negative.
-auto point_at(ray const& r, double t) -> vector3;
+vector3
+point_at(ray const& r, double t);
 
 // Contains both a ray and a point on this ray. The point is computed lazily
 // and cached to avoid its re-computation.
@@ -132,9 +150,14 @@ public:
   ray_point(oxatrace::ray const& ray, double param);
 
   // Observers...
-  auto ray() const noexcept   -> oxatrace::ray { return ray_; }
-  auto param() const noexcept -> double        { return param_; }
-  auto point() const          -> vector3;
+  oxatrace::ray
+  ray() const noexcept { return ray_; }
+
+  double
+  param() const noexcept { return param_; }
+
+  vector3
+  point() const;
 
 private:
   oxatrace::ray ray_;

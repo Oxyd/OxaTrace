@@ -17,18 +17,18 @@ public:
   channel(double value = 0.0);
 
   // Modifiers...
-  auto operator = (double d) -> channel&;
-  void set(double value);
+  channel&  operator = (double d);
+  void      set(double value);
 
   // Observers...
-  operator double () const;
-  auto get() const -> double;
+  operator  double () const;
+  double    get() const;
 
   // Operators...
-  auto operator += (channel other) -> channel&;
-  auto operator -= (channel other) -> channel&;
-  auto operator *= (channel other) -> channel&;
-  auto operator /= (channel other) -> channel&;
+  channel& operator += (channel other);
+  channel& operator -= (channel other);
+  channel& operator *= (channel other);
+  channel& operator /= (channel other);
 
 private:
   static constexpr double MIN{0.0};
@@ -37,8 +37,8 @@ private:
   double value_;
 };
 
-inline
-auto operator < (channel lhs, channel rhs) -> bool {
+inline bool
+operator < (channel lhs, channel rhs) {
   return lhs.get() < rhs.get();
 }
 
@@ -61,35 +61,35 @@ public:
   color(channel r, channel g, channel b);
 
   // Observers...
-  auto r() -> channel& { return channels_[0]; }
-  auto g() -> channel& { return channels_[1]; }
-  auto b() -> channel& { return channels_[2]; }
+  channel& r() { return channels_[0]; }
+  channel& g() { return channels_[1]; }
+  channel& b() { return channels_[2]; }
 
-  auto r() const -> channel const& { return channels_[0]; }
-  auto g() const -> channel const& { return channels_[1]; }
-  auto b() const -> channel const& { return channels_[2]; }
+  channel const& r() const { return channels_[0]; }
+  channel const& g() const { return channels_[1]; }
+  channel const& b() const { return channels_[2]; }
   
   // Iterator access over all three channels.
-  auto begin() noexcept -> channel_iterator { return channels_.begin(); }
-  auto end() noexcept   -> channel_iterator { return channels_.end(); }
+  channel_iterator
+  begin() noexcept  { return channels_.begin(); }
+  channel_iterator
+  end() noexcept    { return channels_.end(); }
 
-  auto begin() const noexcept -> const_channel_iterator {
-    return channels_.begin();
-  }
-  auto end() const noexcept -> const_channel_iterator {
-    return channels_.end();
-  }
+  const_channel_iterator
+  begin() const noexcept    { return channels_.begin(); }
+  const_channel_iterator
+  end() const noexcept      { return channels_.end(); }
 
   // Operators...
   // These work component-wise.
-  auto operator += (color other) -> color&;
-  auto operator -= (color other) -> color&;
-  auto operator *= (color other) -> color&;
-  auto operator /= (color other) -> color&;
+  color& operator += (color other);
+  color& operator -= (color other);
+  color& operator *= (color other);
+  color& operator /= (color other);
 
   // These multiply/divide each channel separately.
-  auto operator *= (double d) -> color&;
-  auto operator /= (double d) -> color&;
+  color& operator *= (double d);
+  color& operator /= (double d);
 
 private:
   channel_list channels_;
