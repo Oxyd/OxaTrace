@@ -28,6 +28,13 @@ TEST(vector_test, get_any_orthogonal_test) {
   EXPECT_THROW(get_any_orthogonal(x), std::invalid_argument);
 }
 
+TEST(vector_test, reflection_test) {
+  vector3 n{0.0, -1.0, 0.0};
+  unit3   v{1.0, 1.0, 0.0};
+  unit3   v_reflected = reflect(v, n);
+  EXPECT_NEAR(0.0, (v_reflected - unit3{1.0, -1.0, 0.0}).norm(), EPSILON);
+}
+
 auto main(int argc, char** argv) -> int {
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();

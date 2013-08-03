@@ -36,6 +36,11 @@ oxatrace::get_any_orthogonal(unit3 const& v) {
     return {1.0, 1.0, (-v.x() - v.y()) / v.z()};
 }
 
+unit3
+oxatrace::reflect(unit3 const& v, unit3 const& normal) {
+  return v - 2.0 * v.dot(normal) * normal;
+}
+
 std::ostream&
 oxatrace::operator << (std::ostream& out, ray const& ray) {
   return out << "ray{origin =\n" << ray.origin()

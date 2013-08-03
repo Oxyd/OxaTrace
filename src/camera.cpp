@@ -66,7 +66,7 @@ camera::camera(vector3 center, unit3 view, unit3 up,
   // compute the film_bottom_right_ using that information.
   //
 
-  if (field_of_view <= 0.0 || field_of_view >= 2.0 * PI)
+  if (field_of_view <= 0.0 || field_of_view >= PI)
     throw std::out_of_range{"camera::camera: field_of_view out of range"};
 
   double const h = 1.0 / (2.0 * std::tan(field_of_view / 2.0));

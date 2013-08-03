@@ -98,6 +98,11 @@ cos_angle(
 unit3
 get_any_orthogonal(unit3 const& v);
 
+// Get the vector reflected off a surface, given the normal vector of the
+// surface.
+unit3
+reflect(unit3 const& v, unit3 const& normal);
+
 //
 // Rays
 //

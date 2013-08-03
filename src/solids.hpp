@@ -76,16 +76,21 @@ class material {
 public:
   // Create a Phong material.
   // Throws:
-  //   -- std::invalid_argument: If diffuse or specular are outside the range
-  //                             [0, 1].
+  //    -- std::invalid_argument:
+  //        If diffuse, specular, or reflectance are outside the range [0, 1].
   material(color const& ambient, double diffuse, double specular,
-           unsigned specular_exponent);
+           unsigned specular_exponent,
+           double reflectance = 0.0);
 
   // Get the base colour of the material. This is the colour the object should
   // have even if it is unaffected by any light source. In other words, the
   // ambient colour.
   color
-  base_color() const;
+  base_color() const { return ambient_; }
+
+  // The reflectance of this material. This is a value in range [0, 1].
+  double
+  reflectance() const { return reflectance_; }
 
   // Given a light source directly visible from a given point, update the
   // resulting ray colour accordingly. During ray tracing, call this function
@@ -93,22 +98,28 @@ public:
   // intersection.
   //
   // Parameters:
-  //   -- base_color: The ray colour computed so far.
-  //   -- normal:     Surface normal at the point of intersection.
-  //   -- light_dir:  Direction (in world coordinates) toward the source of
-  //                  light from the intersection point.
-  //   -- light:      The light illuminating the solid.
+  //   -- base_color:   The ray colour computed so far.
+  //   -- normal:       Surface normal at the point of intersection.
+  //   -- light_dir:    Direction (in world coordinates) toward the source of
+  //                    light from the intersection point.
+  //   -- light_color:  Colour of the light illuminating the solid.
   color
-  illuminate(
-    color const& base_color, unit<vector3> const& normal,
-    light const& light, unit<vector3> const& light_dir
+  add_light(
+    color const& base_color, unit3 const& normal,
+    color const& light_color, unit3 const& light_dir
   ) const;
 
+  // Given a computed colour value of a reflected ray, update the resulting ray
+  // colour.
+  color
+  add_reflection(color const& base_color, color const& reflection_color) const;
+
 private:
-  color    ambient_;
-  double   diffuse_;
-  double   specular_;
-  unsigned specular_exponent_;
+  color     ambient_;
+  double    diffuse_;
+  double    specular_;
+  unsigned  specular_exponent_;
+  double    reflectance_;
 };
 
 //

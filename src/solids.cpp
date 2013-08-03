@@ -111,23 +111,26 @@ auto plane::normal_at(ray_point const& rp) const -> unit3 {
 }
 
 material::material(color const& ambient, double diffuse, double specular,
-                   unsigned specular_exponent)
+                   unsigned specular_exponent, double reflectance)
   : ambient_{ambient}
   , diffuse_{diffuse}
   , specular_{specular} 
-  , specular_exponent_{specular_exponent} { 
+  , specular_exponent_{specular_exponent}
+  , reflectance_{reflectance}
+{
   if (diffuse < 0.0 || diffuse > 1.0)
     throw std::invalid_argument{"material: Invalid diffuse coefficient."};
   if (specular < 0.0 || specular > 1.0)
     throw std::invalid_argument{"material: Invalid specular coefficient."};
+  if (reflectance_ < 0.0 || reflectance_ > 1.0)
+    throw std::invalid_argument{"material: Invalid reflectance value."};
 }
 
-auto material::base_color() const -> color { return ambient_; }
-
-auto material::illuminate(
-  color const& base_color, unit<vector3> const& normal,
-  light const& light, unit<vector3> const& light_dir
-) const -> color {
+color
+material::add_light(
+  color const& base_color, unit3 const& normal,
+  color const& light_color, unit3 const& light_dir
+) const {
   // We're using the Phong shading model here, which is an empiric one without
   // much basis in real physics. Aside from the ambient term (which is there
   // to simulate background light which "just happens" in real life), we have
@@ -151,12 +154,19 @@ auto material::illuminate(
 
   if (cos_alpha <= 0.0) return base_color;
 
-  color const diffuse_color{light.color() * diffuse_ * cos_alpha};
+  color const diffuse_color{light_color * diffuse_ * cos_alpha};
   color const specular_color{
-    light.color() * specular_ * std::pow(cos_alpha, specular_exponent_)
+    light_color * specular_ * std::pow(cos_alpha, specular_exponent_)
   };
 
   return base_color + diffuse_color + specular_color;
+}
+
+color
+material::add_reflection(
+  color const& base_color, color const& reflection_color
+) const {
+  return base_color + reflection_color * reflectance_;
 }
 
 solid::solid(std::shared_ptr<oxatrace::shape> const& s, oxatrace::material mat)
