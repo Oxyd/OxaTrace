@@ -6,6 +6,9 @@
 #include <algorithm>
 #include <cstddef>
 #include <iostream>
+#include <iomanip>
+#include <string>
+#include <sstream>
 
 #include <typeinfo>
 
@@ -67,7 +70,7 @@ main(int argc, char** argv) {
                 material{color{0.2, 0.2, 0.2}, 0.4, 0.8, 50, 0.2}};
   sphere1
     .scale(3.0)
-    .translate({0, 3, -5})
+    .translate({0, 3, -15})
     ;
   def.add_solid(std::move(sphere1));
 
@@ -75,7 +78,7 @@ main(int argc, char** argv) {
                 material{color{0.2, 0.2, 0.2}, 0.4, 0.8, 50, 0.2}};
   sphere2
     .scale(3.0)
-    .translate({-8, 3, -2})
+    .translate({-8, 3, -15})
     ;
   def.add_solid(std::move(sphere2));
 
@@ -90,14 +93,23 @@ main(int argc, char** argv) {
     std::make_shared<point_light>(vector3{-6.0, 10.0, 8.0},
                                   color{1.0, 0.8, 0.8})
   );
-  
+
   std::unique_ptr<scene> sc{simple_scene::make(std::move(def))};
-  camera cam{vector3{3.0, 3.5, 8.0}, unit3{-0.2, -0.3, -0.7},
-             unit3{0.0, 1.0, 0.0}, 640, 480, PI / 2.0};
+
+  camera cam{640.0 / 480.0, PI / 2.0};
+  cam
+    .rotate(Eigen::AngleAxisd{PI / 15, vector3::UnitY()})
+    .translate({0.0, 1.0, 0.0})
+    ;
   
   std::cout << "Tracing rays...\n";
   
   image result{640, 480};
+
+  unsigned total = 640 * 480;
+  unsigned done = 0;
+  unsigned last_perc = 0;
+
   for (image::index y = 0; y < result.height(); ++y)
     for (image::index x = 0; x < result.width(); ++x) {
       double const cam_u = double(x) / double(result.width());
@@ -105,9 +117,25 @@ main(int argc, char** argv) {
       
       ray const r = cam.make_ray(cam_u, cam_v);
       result.pixel_at(x, y) = shade(*sc, r);
+
+      ++done;
+      double complete = double(done) / double(total) * 100;
+      unsigned const PROGRESS_WIDTH = 40;
+
+      if (unsigned(complete * 100) != last_perc) {
+        std::cout << '\r'
+                  << std::setfill(' ') << std::setw(6)
+                  << std::fixed << std::setprecision(2)
+                  << complete << "% [";
+        unsigned progress = double(done) / double(total) * PROGRESS_WIDTH;
+        for (unsigned i = 0; i < progress; ++i) std::cout << '#';
+        for (unsigned i = progress; i < PROGRESS_WIDTH; ++i) std::cout << ' ';
+        std::cout << ']' << std::flush;
+        last_perc = unsigned(complete * 100);
+      }
     }
 
-  std::cout << "Saving result image...\n";
+  std::cout << "\nSaving result image...\n";
   save(result, filename);
 
   std::cout << "Done\n";
