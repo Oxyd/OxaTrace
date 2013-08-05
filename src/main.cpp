@@ -137,7 +137,7 @@ main(int argc, char** argv) {
     }
 
   std::cout << "\nSaving result image...\n";
-  auto ldr_result = transform(result, clip);
+  auto ldr_result = transform(result, exposition(1.5));
   save(ldr_result, filename);
 
   std::cout << "Done\n";

@@ -148,6 +148,23 @@ transform(BaseImage const& base, Transform transform) {
 ldr_image::pixel_type
 clip(hdr_image::pixel_type pixel);
 
+// HDR -> LDR transformer that mimics real film exposition. The exposure
+// parameter rougly corresponds to the exposition time.
+//
+// The formula used by this operator is
+//   I_out = 1 - exp(I_in * -exposure)
+class exposition {
+public:
+  exposition(double exposure) noexcept : exposure_{exposure} { }
+  double exposure() const noexcept { return exposure_; }
+
+  ldr_image::pixel_type
+  operator () (hdr_image::pixel_type pixel) const noexcept;
+
+private:
+  double exposure_;
+};
+
 // Save an LDR image into a PNG file.
 // Throws:
 //   -- std::ios_base::failure: I/O error.
