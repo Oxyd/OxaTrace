@@ -21,7 +21,7 @@ public:
   get_source() const = 0;
 
   // Get the colour of this light.
-  virtual oxatrace::color
+  virtual oxatrace::hdr_color
   color() const = 0;
 };
 
@@ -30,17 +30,17 @@ public:
 class point_light final : public light {
 public:
   // Construct a point light from the position of its only point and its colour.
-  point_light(vector3 const& pos, oxatrace::color const& col);
+  point_light(vector3 const& pos, oxatrace::hdr_color const& col);
 
   virtual vector3
   get_source() const override;
 
-  virtual oxatrace::color
+  virtual oxatrace::hdr_color
   color() const override;
 
 private:
-  vector3         position_;
-  oxatrace::color color_;
+  vector3               position_;
+  oxatrace::hdr_color   color_;
 };
 
 } // namespace oxatrace

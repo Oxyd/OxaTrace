@@ -33,7 +33,7 @@ class scene;
 //   That can be hidden inside material, though.
 //
 //   Have some policy classes that can then be passed into here?
-color
+hdr_color
 trace(ray const& ray, scene const& scene, unsigned max_depth = 1);
 
 } // namespace oxatrace

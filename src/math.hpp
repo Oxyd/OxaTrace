@@ -22,15 +22,20 @@ constexpr double EPSILON{1e-8};
 
 // Return true iff the two given doubles differ by less than EPSILON.
 inline bool
-double_eq(double a, double b) {
+double_eq(double a, double b) noexcept {
   return std::fabs(a - b) < EPSILON;
 }
 
 // Return true iff the two given doubles differ by at least EPSILON.
 inline bool
-double_neq(double a, double b) {
+double_neq(double a, double b) noexcept {
   return !double_eq(a, b);
 }
+
+// Round a floating point number to an integer.
+template <typename Integer>
+Integer
+round(double d) noexcept { return static_cast<Integer>(d + 0.5); }
 
 //
 // Vectors & Matrices

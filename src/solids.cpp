@@ -79,7 +79,8 @@ auto sphere::intersect(ray const& ray) const -> intersection_list {
   else                    return {};
 }
 
-auto sphere::normal_at(ray_point const& rp) const -> unit3 {
+unit3
+sphere::normal_at(ray_point const& rp) const {
   return rp.point();
 }
 
@@ -99,7 +100,8 @@ auto plane::intersect(ray const& ray) const -> intersection_list {
   else             return {};
 }
 
-auto plane::normal_at(ray_point const& rp) const -> unit3 {
+unit3
+plane::normal_at(ray_point const& rp) const {
   // We need to consider the ray origin here in order to determine the "sign"
   // of the result: Plane can be viewed both from the front and from the behind,
   // and no way is "inside" or "outside".
@@ -110,7 +112,7 @@ auto plane::normal_at(ray_point const& rp) const -> unit3 {
     return vector3::UnitZ();
 }
 
-material::material(color const& ambient, double diffuse, double specular,
+material::material(hdr_color const& ambient, double diffuse, double specular,
                    unsigned specular_exponent, double reflectance)
   : ambient_{ambient}
   , diffuse_{diffuse}
@@ -126,10 +128,10 @@ material::material(color const& ambient, double diffuse, double specular,
     throw std::invalid_argument{"material: Invalid reflectance value."};
 }
 
-color
+hdr_color
 material::add_light(
-  color const& base_color, unit3 const& normal,
-  color const& light_color, unit3 const& light_dir
+  hdr_color const& base_color, unit3 const& normal,
+  hdr_color const& light_color, unit3 const& light_dir
 ) const {
   // We're using the Phong shading model here, which is an empiric one without
   // much basis in real physics. Aside from the ambient term (which is there
@@ -154,20 +156,18 @@ material::add_light(
 
   if (cos_alpha <= 0.0) return base_color;
 
-  color const diffuse_color{light_color * diffuse_ * cos_alpha};
-  color const specular_color{
+  hdr_color const diffuse_color{light_color * diffuse_ * cos_alpha};
+  hdr_color const specular_color{
     light_color * specular_ * std::pow(cos_alpha, specular_exponent_)
   };
 
   return base_color + diffuse_color + specular_color;
 }
 
-color
-material::add_reflection(
-  color const& base_color, color const& reflection_color
-) const {
-  return base_color + reflection_color * reflectance_;
-}
+hdr_color
+material::add_reflection(hdr_color const& base_color,
+                         hdr_color const& reflection_color) const
+{ return base_color + reflection_color * reflectance_; }
 
 solid::solid(std::shared_ptr<oxatrace::shape> const& s, oxatrace::material mat)
   : shape_{s}
@@ -175,29 +175,34 @@ solid::solid(std::shared_ptr<oxatrace::shape> const& s, oxatrace::material mat)
   , world_to_object_{Eigen::Affine3d::Identity()}
   , object_to_world_{Eigen::Affine3d::Identity()} { }
 
-auto solid::material() const noexcept -> oxatrace::material const& {
+material const&
+solid::material() const noexcept {
   return material_;
 }
 
-auto solid::intersect(ray const& ray) const -> shape::intersection_list {
+shape::intersection_list
+solid::intersect(ray const& ray) const {
   oxatrace::ray const object_ray = oxatrace::transform(ray, world_to_object_);
   return shape_->intersect(object_ray);
 }
 
-auto solid::normal_at(ray_point const& rp) const -> unit3 {
+unit3
+solid::normal_at(ray_point const& rp) const {
   vector3 const local_normal = shape_->normal_at(
     {oxatrace::transform(rp.ray(), world_to_object_), rp.param()}
   );
   return object_to_world_.linear().transpose() * local_normal;
 }
 
-auto solid::translate(vector3 const& tr) -> solid& {
+solid&
+solid::translate(vector3 const& tr) {
   object_to_world_.pretranslate(tr);
   world_to_object_.translate(-tr);
   return *this;
 }
 
-auto solid::scale(double coef) -> solid& {
+solid&
+solid::scale(double coef) {
   if (coef < EPSILON)
     throw std::invalid_argument{"solid::scale: coef <= 0"};
 
@@ -206,7 +211,8 @@ auto solid::scale(double coef) -> solid& {
   return *this;
 }
 
-auto solid::scale(double x, double y, double z) -> solid& {
+solid&
+solid::scale(double x, double y, double z) {
   if (x < EPSILON || y < EPSILON || z < EPSILON)
     throw std::invalid_argument{"solid::scale: x, y, or z <= 0.0"};
   
@@ -219,14 +225,15 @@ auto solid::scale(double x, double y, double z) -> solid& {
   return *this;
 }
 
-auto solid::rotate(Eigen::AngleAxisd const& rot) -> solid& {
+solid&
+solid::rotate(Eigen::AngleAxisd const& rot) {
   object_to_world_.prerotate(rot);
   world_to_object_.rotate(rot.inverse());
   return *this;
 }
 
-auto solid::transform(Eigen::Affine3d const& tr,
-                      Eigen::Affine3d const& inverse) -> solid& {
+solid&
+solid::transform(Eigen::Affine3d const& tr, Eigen::Affine3d const& inverse) {
   assert((tr * inverse).isApprox(Eigen::Affine3d::Identity()));
 
   object_to_world_ = tr * object_to_world_;
@@ -235,7 +242,8 @@ auto solid::transform(Eigen::Affine3d const& tr,
   return *this;
 }
 
-auto solid::transform(Eigen::Affine3d const& tr) -> solid& {
+solid&
+solid::transform(Eigen::Affine3d const& tr) {
   Eigen::Affine3d inverse = tr.inverse();
   return transform(tr, inverse);
 }
