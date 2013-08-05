@@ -3,17 +3,12 @@
 
 #include "color.hpp"
 
-#define png_infopp_NULL (png_infopp)NULL
-#define int_p_NULL (int*)NULL
-#include <boost/gil/extension/io/png_io.hpp>
-
-#include <boost/gil/image.hpp>
-#include <boost/gil/pixel.hpp>
-#include <boost/gil/typedefs.hpp>
 #include <boost/iterator/transform_iterator.hpp>
 
 #include <algorithm>
 #include <cstddef>
+#include <fstream>
+#include <iostream>
 #include <stdexcept>
 #include <type_traits>
 #include <vector>
@@ -165,7 +160,7 @@ private:
   double exposure_;
 };
 
-// Save an LDR image into a PNG file.
+// Save an LDR image into a PPM file.
 // Throws:
 //   -- std::ios_base::failure: I/O error.
 template <typename LDRImage>
@@ -204,21 +199,20 @@ typename std::enable_if<
   std::is_same<typename LDRImage::pixel_type::channel, std::uint8_t>::value
 >::type
 save(LDRImage const& image, std::string const& filename) {
-  // We're going to copy the image over into a new one that Boost.GIL can
-  // understand. We're then going to save the copy. It appears to be easier
-  // this way than trying to force Boost.GIL to understand oxatrace::image...
+  std::ofstream out(filename.c_str());
+  out.exceptions(std::ios::badbit | std::ios::failbit);
 
-  using pixel_t   = boost::gil::rgb8_pixel_t;
-  using image_t   = boost::gil::rgb8_image_t;
+  // Header:
+  out << "P6\n"     // Binary PPM
+      << image.width() << ' ' << image.height() << '\n'
+      << "255\n";   // Max value of a single pixel.
 
-  image_t im(image.width(), image.height());
-  auto view = boost::gil::view(im);
-
-  std::transform(image.begin(), image.end(), view.begin(),
-                 [](ldr_color const& c) {
-                   return pixel_t{c.r(), c.g(), c.b()};
-                 });
-  boost::gil::png_write_view(filename, view);
+  // Data:
+  for (auto pixel : image) {
+    out.put(pixel.r());
+    out.put(pixel.g());
+    out.put(pixel.b());
+  }
 }
 
 } // namespace oxatrace

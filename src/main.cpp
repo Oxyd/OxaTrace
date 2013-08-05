@@ -65,7 +65,7 @@ main(int argc, char** argv) {
 
   scene_definition def;
   auto sphere_shape = std::make_shared<oxatrace::sphere>();
-  hdr_color const sphere_color{0.8, 0.55, 0.75};
+  hdr_color const sphere_color{1.0, 0.65, 0.85};
   material const sphere_material{sphere_color, 0.1, 0.6, 100, 0.2};
 
   solid sphere1{sphere_shape, sphere_material};
@@ -83,7 +83,7 @@ main(int argc, char** argv) {
   def.add_solid(std::move(sphere2));
 
   solid plane{std::make_shared<oxatrace::plane>(),
-              material{hdr_color{0.7, 0.7, 0.7}, 0.2, 0.5, 300, 0.1}};
+              material{hdr_color{0.5, 0.5, 0.5}, 0.4, 0.5, 200, 0.1}};
   plane
     .rotate(Eigen::AngleAxisd{PI / 2., vector3::UnitX()})
     ;
@@ -137,7 +137,7 @@ main(int argc, char** argv) {
     }
 
   std::cout << "\nSaving result image...\n";
-  auto ldr_result = transform(result, exposition(1.5));
+  auto ldr_result = transform(result, exposition(1.7));
   save(ldr_result, filename);
 
   std::cout << "Done\n";
