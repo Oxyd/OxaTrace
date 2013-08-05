@@ -52,8 +52,6 @@ shade(scene const& scene, ray const& ray,
   return result;
 }
 
-// Just making a change...
-
 int
 main(int argc, char** argv) {
   if (argc != 2) {
@@ -139,8 +137,12 @@ main(int argc, char** argv) {
     }
 
   std::cout << "\nSaving result image...\n";
-  auto ldr_result = transform(result, exposition(1.7));
-  save(ldr_result, filename);
+  save(
+    transform(result, [] (hdr_image::pixel_type pixel) {
+      return to_ldr(exposition(1.7)(pixel));
+    }),
+    filename
+  );
 
   std::cout << "Done\n";
 }

@@ -68,8 +68,9 @@ private:
   std::size_t width_;
 };
 
-using hdr_image = basic_image<hdr_color>;
-using ldr_image = basic_image<ldr_color>;
+using hdr_image = basic_image<hdr_color>;        // Channels in [0, infty)
+using ldr_float_image = basic_image<hdr_color>;  // Channels in [0, 1]
+using ldr_image = basic_image<ldr_color>;        // Channels in {0, ..., 255}
 
 // Provides a transformed view of an underlying image. Underlying image may
 // be basic_image or another transformed_image. Unlike basic_image, this
@@ -138,12 +139,19 @@ transform(BaseImage const& base, Transform transform) {
   return transformed_image<BaseImage, Transform>(base, transform);
 }
 
+// A float LDR -> LDR transformer. The input is first clipped into the range
+// [0, 1], then spread into the range {0, ..., 255}. This should be used as
+// the last step in HDR -> LDR conversion process as it loses a great deal
+// of information.
+ldr_image::pixel_type
+to_ldr(ldr_float_image::pixel_type pixel);
+
 // A simple HDR -> LDR transformer that clips all HDR values to the range
 // [0, 1].
-ldr_image::pixel_type
+ldr_float_image::pixel_type
 clip(hdr_image::pixel_type pixel);
 
-// HDR -> LDR transformer that mimics real film exposition. The exposure
+// HDR -> float LDR transformer that mimics real film exposition. The exposure
 // parameter rougly corresponds to the exposition time.
 //
 // The formula used by this operator is
@@ -153,7 +161,7 @@ public:
   exposition(double exposure) noexcept : exposure_{exposure} { }
   double exposure() const noexcept { return exposure_; }
 
-  ldr_image::pixel_type
+  ldr_float_image::pixel_type
   operator () (hdr_image::pixel_type pixel) const noexcept;
 
 private:
