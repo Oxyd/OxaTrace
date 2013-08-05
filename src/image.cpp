@@ -43,3 +43,15 @@ oxatrace::exposition::operator () (hdr_image::pixel_type pixel) const noexcept {
     1.0 - std::exp(pixel.b() * -exposure_)
   };
 }
+
+ldr_float_image::pixel_type
+oxatrace::gamma_correction::operator () (ldr_float_image::pixel_type pixel)
+const noexcept
+{
+  double const g = 1 / gamma_;
+  return {
+    std::pow(pixel.r(), g),
+    std::pow(pixel.g(), g),
+    std::pow(pixel.b(), g)
+  };
+}

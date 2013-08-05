@@ -139,7 +139,7 @@ main(int argc, char** argv) {
   std::cout << "\nSaving result image...\n";
   save(
     transform(result, [] (hdr_image::pixel_type pixel) {
-      return to_ldr(exposition(1.7)(pixel));
+      return to_ldr(gamma_correction()(exposition(1.0)(pixel)));
     }),
     filename
   );

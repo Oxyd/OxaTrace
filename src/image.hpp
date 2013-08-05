@@ -168,6 +168,20 @@ private:
   double exposure_;
 };
 
+// Perform gamma-correction. This is to be called on float LDR just before
+// its conversion to LDR.
+class gamma_correction {
+public:
+  gamma_correction(double gamma = 2.2) : gamma_{gamma} { }
+  double gamma() const noexcept { return gamma_; }
+
+  ldr_float_image::pixel_type
+  operator () (ldr_float_image::pixel_type pixel) const noexcept;
+
+private:
+  double gamma_;
+};
+
 // Save an LDR image into a PPM file.
 // Throws:
 //   -- std::ios_base::failure: I/O error.
