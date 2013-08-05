@@ -52,6 +52,8 @@ shade(scene const& scene, ray const& ray,
   return result;
 }
 
+// Just making a change...
+
 int
 main(int argc, char** argv) {
   if (argc != 2) {
