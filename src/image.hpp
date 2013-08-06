@@ -43,6 +43,7 @@ public:
   // Observers...
   index width() const noexcept  { return width_; }
   index height() const noexcept { return pixels_.size() / width(); }
+  index size() const noexcept   { return pixels_.size(); }
 
   // Pixel access...
   pixel_iterator
@@ -109,6 +110,7 @@ public:
 
   index width() const noexcept  { return base_.width(); }
   index height() const noexcept { return base_.height(); }
+  index size() const noexcept   { return base_.size(); }
 
   // Pixel access...
 
@@ -131,6 +133,18 @@ private:
   base_image_t const&   base_;
   Transform             transform_;
 };
+
+// Get the log-average luminance of the picture. The formula used is
+//   L_avg = exp(1/N * sum(log(delta + L(x, y)))),
+// where
+//   N is the number of pixels total,
+//   sum goes over all pixels
+//   delta is a small positive number to avoid trouble with L(x, y) = 0
+//   L(x, y) is the luminance of pixel (x, y).
+//
+// L_avg is the geometric mean of the luminances.
+double
+log_avg_luminance(hdr_image const& image);
 
 // Make a transformed image.
 template <typename BaseImage, typename Transform>
@@ -168,11 +182,29 @@ private:
   double exposure_;
 };
 
+// Applies Reinhard's operator. The key parameter affects the simulated
+// exposure of the resulting image. log_avg_luminance is the value computed
+// by the function of the same name.
+class reinhard {
+public:
+  reinhard(double log_avg_luminance, double key = 1.8) noexcept
+    : avg_{log_avg_luminance}
+    , key_{key} { }
+  double key() const noexcept { return key_; }
+
+  ldr_float_image::pixel_type
+  operator () (hdr_image::pixel_type pixel) const noexcept;
+
+private:
+  double avg_;
+  double key_;
+};
+
 // Perform gamma-correction. This is to be called on float LDR just before
 // its conversion to LDR.
 class gamma_correction {
 public:
-  gamma_correction(double gamma = 2.2) : gamma_{gamma} { }
+  gamma_correction(double gamma = 2.2) noexcept : gamma_{gamma} { }
   double gamma() const noexcept { return gamma_; }
 
   ldr_float_image::pixel_type
@@ -230,11 +262,9 @@ save(LDRImage const& image, std::string const& filename) {
       << "255\n";   // Max value of a single pixel.
 
   // Data:
-  for (auto pixel : image) {
-    out.put(pixel.r());
-    out.put(pixel.g());
-    out.put(pixel.b());
-  }
+  for (auto pixel : image)
+    for (auto channel : pixel)
+      out.put(channel);
 }
 
 } // namespace oxatrace

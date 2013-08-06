@@ -65,8 +65,8 @@ main(int argc, char** argv) {
 
   scene_definition def;
   auto sphere_shape = std::make_shared<oxatrace::sphere>();
-  hdr_color const sphere_color{1.0, 0.65, 0.85};
-  material const sphere_material{sphere_color, 0.1, 0.6, 100, 0.2};
+  hdr_color const sphere_color{1.0, 0.45, 0.65};
+  material const sphere_material{sphere_color, 0.4, 0.8, 100, 0.1};
 
   solid sphere1{sphere_shape, sphere_material};
   sphere1
@@ -91,7 +91,7 @@ main(int argc, char** argv) {
 
   def.add_light(
     std::make_shared<point_light>(vector3{-6.0, 10.0, 8.0},
-                                  hdr_color{0.9, 0.9, 0.9})
+                                  hdr_color{1.0, 1.0, 1.0})
   );
 
   std::unique_ptr<scene> sc{simple_scene::make(std::move(def))};
@@ -106,6 +106,7 @@ main(int argc, char** argv) {
   std::cout << "Tracing rays...\n";
   
   hdr_image result{640, 480};
+  hdr_color const background{0.05, 0.05, 0.2};
 
   unsigned total = 640 * 480;
   unsigned done = 0;
@@ -117,7 +118,7 @@ main(int argc, char** argv) {
       double const cam_v = double(y) / double(result.height());
       
       ray const r = cam.make_ray(cam_u, cam_v);
-      result.pixel_at(x, y) = shade(*sc, r);
+      result.pixel_at(x, y) = shade(*sc, r, background);
 
       ++done;
       double complete = double(done) / double(total) * 100;
@@ -137,9 +138,13 @@ main(int argc, char** argv) {
     }
 
   std::cout << "\nSaving result image...\n";
+
+  double const avg_luminance = log_avg_luminance(result);
+  std::cout << avg_luminance << '\n';
+
   save(
-    transform(result, [] (hdr_image::pixel_type pixel) {
-      return to_ldr(gamma_correction()(exposition(1.0)(pixel)));
+    transform(result, [&] (hdr_image::pixel_type pixel) {
+      return to_ldr(gamma_correction()(reinhard(avg_luminance, 0.3)(pixel)));
     }),
     filename
   );
