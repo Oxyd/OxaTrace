@@ -2,6 +2,7 @@
 #include "image.hpp"
 #include "lights.hpp"
 #include "scene.hpp"
+#include "shader.hpp"
 #include "util.hpp"
 
 #include <algorithm>
@@ -14,44 +15,6 @@
 #include <typeinfo>
 
 using namespace oxatrace;
-
-static double const MIN_IMPORTANCE = 0.0001;
-unsigned const      MAX_DEPTH = 16;
-
-hdr_color
-shade(scene const& scene, ray const& ray,
-      hdr_color background = {0.0, 0.0, 0.0},
-      unsigned depth = 0, double importance = 1.0) {
-  if (importance < MIN_IMPORTANCE || depth > MAX_DEPTH)
-    return background;
-
-  boost::optional<scene::intersection> i = scene.intersect_solid(ray);
-  if (!i)
-    return background;
-
-  hdr_color result{i->solid().material().base_color()};
-  for (light const& l : scene.lights()) {
-    unit3 const light_dir{l.get_source() - i->position()};
-
-    if (auto obstacle = scene.intersect_solid({i->position(), light_dir}))
-      if ((obstacle->position() - i->position()).squaredNorm() <
-          (l.get_source() - i->position()).squaredNorm())
-        continue;  // Obstacle blocks direct path from light to solid
-
-    result = i->solid().material().add_light(
-      result, i->normal(), l.color(), light_dir
-    );
-  }
-
-  unit3 reflection_dir = reflect(ray.direction(), i->normal());
-  oxatrace::ray reflected{i->position(), reflection_dir};
-  double const reflection_importance = i->solid().material().reflectance();
-  hdr_color const reflection = shade(scene, reflected, background,
-                                     depth + 1, reflection_importance * importance);
-  result = i->solid().material().add_reflection(result, reflection);
-
-  return result;
-}
 
 int
 main(int argc, char** argv) {
@@ -111,6 +74,9 @@ main(int argc, char** argv) {
   hdr_image result{640, 480};
   hdr_color const background{0.05, 0.05, 0.2};
 
+  shader shader;
+  shader.background(background);
+
   unsigned total = 640 * 480;
   unsigned done = 0;
   unsigned last_perc = 0;
@@ -121,7 +87,7 @@ main(int argc, char** argv) {
       double const cam_v = double(y) / double(result.height());
       
       ray const r = cam.make_ray(cam_u, cam_v);
-      result.pixel_at(x, y) = shade(*sc, r, background);
+      result.pixel_at(x, y) = shader.shade(*sc, r);
 
       ++done;
       double complete = double(done) / double(total) * 100;
