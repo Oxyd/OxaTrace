@@ -19,7 +19,7 @@ mode ?= release
 ifeq ($(mode), release)
 	CXXFLAGS += -O3 -DNDEBUG
 else
-	CXXFLAGS += -ggdb
+	CXXFLAGS += -Og -ggdb
 endif
 
 #
