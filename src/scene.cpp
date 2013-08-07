@@ -1,4 +1,5 @@
 #include "scene.hpp"
+#include "util.hpp"
 
 #include <algorithm>
 #include <limits>
@@ -7,13 +8,13 @@
 using namespace oxatrace;
 
 void
-scene_definition::add_solid(solid s) {
+scene_definition::add_solid(std::unique_ptr<solid> s) {
   solids_.push_back(std::move(s));
 }
 
 void
-scene_definition::add_light(std::shared_ptr<light> const& l) {
-  lights_.push_back(l);
+scene_definition::add_light(std::unique_ptr<light> l) {
+  lights_.push_back(std::move(l));
 }
 
 auto
@@ -55,7 +56,7 @@ scene::intersection::normal() const {
 
 std::unique_ptr<simple_scene>
 simple_scene::make(scene_definition def) {
-  return std::unique_ptr<simple_scene>{new simple_scene(std::move(def))};
+  return std::unique_ptr<simple_scene>{new simple_scene{std::move(def)}};
 }
 
 boost::optional<simple_scene::intersection>
@@ -86,7 +87,7 @@ simple_scene::intersect_solid(ray const& ray) const {
 }
 
 simple_scene::simple_scene(scene_definition def)
-  : definition_{def} { }
+  : definition_{std::move(def)} { }
 
 auto
 simple_scene::lights_begin() const noexcept -> light_iterator {

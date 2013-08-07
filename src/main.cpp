@@ -2,6 +2,7 @@
 #include "image.hpp"
 #include "lights.hpp"
 #include "scene.hpp"
+#include "util.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -68,30 +69,32 @@ main(int argc, char** argv) {
   hdr_color const sphere_color{1.0, 0.45, 0.65};
   material const sphere_material{sphere_color, 0.4, 0.8, 100, 0.1};
 
-  solid sphere1{sphere_shape, sphere_material};
-  sphere1
-    .scale(3.0)
+  auto sphere1 = make_unique<solid>(sphere_shape, sphere_material);
+  sphere1->
+     scale(3.0)
     .translate({0, 3, -15})
     ;
   def.add_solid(std::move(sphere1));
 
-  solid sphere2{sphere_shape, sphere_material};
-  sphere2
-    .scale(3.0)
+  auto sphere2 = make_unique<solid>(sphere_shape, sphere_material);
+  sphere2->
+     scale(3.0)
     .translate({-8, 3, -15})
     ;
   def.add_solid(std::move(sphere2));
 
-  solid plane{std::make_shared<oxatrace::plane>(),
-              material{hdr_color{0.5, 0.5, 0.5}, 0.4, 0.5, 200, 0.1}};
-  plane
-    .rotate(Eigen::AngleAxisd{PI / 2., vector3::UnitX()})
+  auto plane = make_unique<solid>(
+    std::make_shared<oxatrace::plane>(),
+    material{hdr_color{0.5, 0.5, 0.5}, 0.5, 0.5, 200, 0.1}
+  );
+  plane->
+     rotate(Eigen::AngleAxisd{PI / 2., vector3::UnitX()})
     ;
   def.add_solid(std::move(plane));
 
   def.add_light(
-    std::make_shared<point_light>(vector3{-6.0, 10.0, 8.0},
-                                  hdr_color{1.0, 1.0, 1.0})
+    make_unique<point_light>(vector3{-6.0, 10.0, 8.0},
+                             hdr_color{1.0, 1.0, 1.0})
   );
 
   std::unique_ptr<scene> sc{simple_scene::make(std::move(def))};

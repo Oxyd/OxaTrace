@@ -15,19 +15,23 @@ namespace oxatrace {
 
 // Scene definition is a mutable container of objects and lights. It can then
 // be turned into a scene which can be rendered.
+//
+// scene_definition is movable but non-copyable.
 class scene_definition {
-  using solid_list = std::vector<solid>;
-  using light_list = std::vector<std::shared_ptr<light const>>;
+  using solid_list = std::vector<std::unique_ptr<solid const>>;
+  using light_list = std::vector<std::unique_ptr<light const>>;
 
 public:
-  using solid_iterator = solid_list::const_iterator;
+  using solid_iterator = boost::indirect_iterator<solid_list::const_iterator>;
   using light_iterator = boost::indirect_iterator<light_list::const_iterator>;
 
   // Modifiers...
-  void add_solid(solid s);
-  void add_light(std::shared_ptr<light> const& l);
+
+  void add_solid(std::unique_ptr<solid> s);
+  void add_light(std::unique_ptr<light> l);
 
   // Observers...
+
   solid_iterator solids_begin() const noexcept;
   solid_iterator solids_end() const noexcept;
 
