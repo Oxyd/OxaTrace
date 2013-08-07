@@ -3,16 +3,14 @@
 #include "lights.hpp"
 #include "scene.hpp"
 #include "shader.hpp"
+#include "text_interface.hpp"
 #include "util.hpp"
 
 #include <algorithm>
 #include <cstddef>
 #include <iostream>
-#include <iomanip>
 #include <string>
 #include <sstream>
-
-#include <typeinfo>
 
 using namespace oxatrace;
 
@@ -25,7 +23,8 @@ main(int argc, char** argv) {
 
   char const* filename{argv[1]};
 
-  std::cout << "Building scene...\n";
+  progress_monitor monitor;
+  monitor.change_phase("Building scene...");
 
   scene_definition def;
   auto sphere_shape = std::make_shared<oxatrace::sphere>();
@@ -69,7 +68,7 @@ main(int argc, char** argv) {
     .translate({0.0, 4.0, 0.0})
     ;
   
-  std::cout << "Tracing rays...\n";
+  monitor.change_phase("Tracing rays...");
   
   hdr_image result{640, 480};
   hdr_color const background{0.05, 0.05, 0.2};
@@ -78,8 +77,7 @@ main(int argc, char** argv) {
   shader.background(background);
 
   unsigned total = 640 * 480;
-  unsigned done = 0;
-  unsigned last_perc = 0;
+  unsigned done  = 0;
 
   for (hdr_image::index y = 0; y < result.height(); ++y)
     for (hdr_image::index x = 0; x < result.width(); ++x) {
@@ -89,27 +87,12 @@ main(int argc, char** argv) {
       ray const r = cam.make_ray(cam_u, cam_v);
       result.pixel_at(x, y) = shader.shade(*sc, r);
 
-      ++done;
-      double complete = double(done) / double(total) * 100;
-      unsigned const PROGRESS_WIDTH = 40;
-
-      if (unsigned(complete * 100) != last_perc) {
-        std::cout << '\r'
-                  << std::setfill(' ') << std::setw(6)
-                  << std::fixed << std::setprecision(2)
-                  << complete << "% [";
-        unsigned progress = double(done) / double(total) * PROGRESS_WIDTH;
-        for (unsigned i = 0; i < progress; ++i) std::cout << '#';
-        for (unsigned i = progress; i < PROGRESS_WIDTH; ++i) std::cout << ' ';
-        std::cout << ']' << std::flush;
-        last_perc = unsigned(complete * 100);
-      }
+      monitor.update_progress((double) ++done / (double) total);
     }
 
-  std::cout << "\nSaving result image...\n";
+  monitor.change_phase("Saving result image...");
 
   double const avg_luminance = log_avg_luminance(result);
-  std::cout << avg_luminance << '\n';
 
   save(
     transform(result, [&] (hdr_image::pixel_type pixel) {
@@ -118,6 +101,6 @@ main(int argc, char** argv) {
     filename
   );
 
-  std::cout << "Done\n";
+  monitor.change_phase("Done");
 }
 
