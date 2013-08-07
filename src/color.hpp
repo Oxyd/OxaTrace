@@ -8,9 +8,6 @@
 
 namespace oxatrace {
 
-struct rgb_tag { enum channels { r, g, b }; };
-struct xyz_tag { enum channels { x, y, z }; };
-
 // Baisc colour is three channels in one. The representation, and thus the
 // range, of individual channels is given by the template parameter ChannelT.
 // Overflows are not detected and result in undefined behaviour.
@@ -19,16 +16,11 @@ struct xyz_tag { enum channels { x, y, z }; };
 // of type ChannelT.
 //
 // The channel type must not throw exceptions.
-//
-// This is a generic template for any three-component colour space. Exact
-// colour space is specified by the ColorSpace template parameter which make it
-// possible to check at compile-time for errors stemming from mixing triples
-// from different colour spaces.
-template <typename ChannelT, typename ColorSpace>
+template <typename ChannelT>
 class basic_color
-  : boost::field_operators<basic_color<ChannelT, ColorSpace>>
-  , boost::multipliable<basic_color<ChannelT, ColorSpace>, ChannelT>
-  , boost::dividable<basic_color<ChannelT, ChannelT>, ChannelT>
+  : boost::field_operators<basic_color<ChannelT>>
+  , boost::multipliable<basic_color<ChannelT>, ChannelT>
+  , boost::dividable<basic_color<ChannelT>, ChannelT>
 {
 public:
   static constexpr std::size_t CHANNELS{3};
@@ -83,17 +75,8 @@ private:
   channel_list channels_;
 };
 
-using hdr_color = basic_color<double, rgb_tag>;
-using ldr_color = basic_color<std::uint8_t, rgb_tag>;
-
-using rgb_color = basic_color<double, rgb_tag>;  // Same as hdr_color
-using xyz_color = basic_color<double, xyz_tag>;
-
-xyz_color
-xyz_from_rgb(rgb_color const& rgb);
-
-rgb_color
-rgb_from_xyz(xyz_color const& xyz);
+using hdr_color = basic_color<double>;
+using ldr_color = basic_color<std::uint8_t>;
 
 double
 luminance(hdr_color const& color);
@@ -102,17 +85,17 @@ luminance(hdr_color const& color);
 // basic_color implementation...
 //
 
-template <typename ChannelT, typename ColorSpace>
-basic_color<ChannelT, ColorSpace>::basic_color(
+template <typename ChannelT>
+basic_color<ChannelT>::basic_color(
   ChannelT r, ChannelT g, ChannelT b
 ) noexcept
   : channels_{r, g, b}
 { }
 
 #define impl_op(op)                                                            \
-  template <typename ChannelT, typename ColorSpace>                            \
-  basic_color<ChannelT, ColorSpace>&                                           \
-  basic_color<ChannelT, ColorSpace>::operator op (basic_color other) noexcept {\
+  template <typename ChannelT>                                                 \
+  basic_color<ChannelT>&                                                       \
+  basic_color<ChannelT>::operator op (basic_color other) noexcept {            \
     for (std::size_t i = 0; i < CHANNELS; ++i)                                 \
       channels_[i] op other.channels_[i];                                      \
     return *this;                                                              \
@@ -125,9 +108,9 @@ impl_op(/=)
 
 #undef impl_op
 #define impl_op2(op)                                                           \
-  template <typename ChannelT, typename ColorSpace>                            \
-  basic_color<ChannelT, ColorSpace>&                                           \
-  basic_color<ChannelT, ColorSpace>::operator op (ChannelT d) noexcept {       \
+  template <typename ChannelT>                                                 \
+  basic_color<ChannelT>&                                                       \
+  basic_color<ChannelT>::operator op (ChannelT d) noexcept {                   \
     for (std::size_t i = 0; i < CHANNELS; ++i)                                 \
       channels_[i] op d;                                                       \
     return *this;                                                              \
