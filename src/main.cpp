@@ -2,7 +2,7 @@
 #include "image.hpp"
 #include "lights.hpp"
 #include "scene.hpp"
-#include "shader.hpp"
+#include "renderer.hpp"
 #include "text_interface.hpp"
 #include "util.hpp"
 
@@ -73,8 +73,8 @@ main(int argc, char** argv) {
   hdr_image result{640, 480};
   hdr_color const background{0.05, 0.05, 0.2};
 
-  shader shader;
-  shader.background(background);
+  shading_policy shading_pol;
+  shading_pol.background(background);
 
   unsigned total = 640 * 480;
   unsigned done  = 0;
@@ -85,7 +85,7 @@ main(int argc, char** argv) {
       double const cam_v = double(y) / double(result.height());
       
       ray const r = cam.make_ray(cam_u, cam_v);
-      result.pixel_at(x, y) = shader.shade(*sc, r);
+      result.pixel_at(x, y) = shade(*sc, r, shading_pol);
 
       monitor.update_progress((double) ++done / (double) total);
     }
