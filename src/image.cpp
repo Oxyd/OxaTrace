@@ -2,9 +2,16 @@
 
 #include "math.hpp"
 
+#include <algorithm>
 #include <cassert>
+#include <limits>
 
 using namespace oxatrace;
+
+static hdr_color::channel
+clip_channel(hdr_color::channel in) {
+  return in <= 1.0 ? in : 1.0;
+}
 
 double
 oxatrace::log_avg_luminance(hdr_image const& image) {
@@ -17,51 +24,66 @@ oxatrace::log_avg_luminance(hdr_image const& image) {
   return std::exp(accum / (image.width() * image.height()));
 }
 
-ldr_image::pixel_type
-oxatrace::to_ldr(ldr_float_image::pixel_type pixel) {
-#ifndef NDEBUG
-  for (auto channel : pixel)
-    assert(channel >= 0 && channel <= 1.0);
-#endif
+ldr_image
+oxatrace::ldr_from_hdr(hdr_image const& hdr) {
+  using ldr_pixel   = ldr_image::pixel_type;
+  using hdr_pixel   = hdr_image::pixel_type;
+  using ldr_channel = ldr_pixel::channel;
+  using hdr_channel = hdr_pixel::channel;
+  ldr_channel const out_max = std::numeric_limits<ldr_channel>::max();
 
-  using ldr_channel = ldr_image::pixel_type::channel;
-  auto rnd = round<ldr_channel>;
-  return {
-    rnd(255.0 * pixel[0]),
-    rnd(255.0 * pixel[1]),
-    rnd(255.0 * pixel[2])
-  };
+  ldr_image result{hdr.width(), hdr.height()};
+  std::transform(
+    hdr.begin(), hdr.end(), result.begin(),
+    [&] (hdr_pixel const& in) -> ldr_pixel {
+      ldr_pixel out;
+      for (std::size_t i = 0; i < ldr_pixel::CHANNELS; ++i)
+        out[i] = round<ldr_channel>(clip_channel(in[i]) * out_max);
+      return out;
+    }
+  );
+
+  return result;
 }
 
-ldr_float_image::pixel_type
-oxatrace::clip(hdr_image::pixel_type pixel) {
-  for (auto& c : pixel)
-    c = c < 1.0 ? c : 1.0;
-  return pixel;
+void
+oxatrace::expose(hdr_image& image, double exposure) {
+  for (auto& pixel : image)
+    for (auto& c : pixel)
+      c = 1.0 - std::exp(c * -exposure);
 }
 
-ldr_float_image::pixel_type
-oxatrace::exposition::operator () (hdr_image::pixel_type pixel) const noexcept {
-  for (auto& c : pixel)
-    c = 1.0 - std::exp(c * -exposure_);
-  return pixel;
+void
+oxatrace::apply_reinhard(hdr_image& image, double key) {
+  double const avg_luminance = log_avg_luminance(image);
+
+  for (auto& pixel : image) {
+    pixel *= key / avg_luminance;
+    for (auto& channel : pixel)
+      channel /= 1.0 + channel;
+  }
 }
 
-ldr_float_image::pixel_type
-oxatrace::reinhard::operator () (hdr_image::pixel_type pixel) const noexcept {
-  pixel *= (key_ / avg_);
-  for (auto& channel : pixel)
-    channel = channel / (1.0 + channel);
-  return pixel;
+void
+oxatrace::correct_gamma(hdr_image& image, double gamma) {
+  double const g = 1 / gamma;
+  for (auto& pixel : image)
+    for (auto& c : pixel)
+      c = std::pow(c, g);
 }
 
-ldr_float_image::pixel_type
-oxatrace::gamma_correction::operator () (ldr_float_image::pixel_type pixel)
-const noexcept
-{
-  double const g = 1 / gamma_;
-  for (auto& c : pixel)
-    c = std::pow(c, g);
-  return pixel;
-}
+void
+oxatrace::save(ldr_image const& image, std::string const& filename) {
+  std::ofstream out(filename.c_str());
+  out.exceptions(std::ios::badbit | std::ios::failbit);
 
+  // Header:
+  out << "P6\n"     // Binary PPM
+      << image.width() << ' ' << image.height() << '\n'
+      << "255\n";   // Max value of a single pixel.
+
+  // Data:
+  for (auto const& pixel : image)
+    for (auto const& channel : pixel)
+      out.put(channel);
+}

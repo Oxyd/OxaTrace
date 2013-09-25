@@ -6,6 +6,8 @@
 #include "text_interface.hpp"
 #include "util.hpp"
 
+#include <boost/program_options.hpp>
+
 #include <algorithm>
 #include <cstddef>
 #include <iostream>
@@ -15,13 +17,36 @@
 using namespace oxatrace;
 
 int
-main(int argc, char** argv) {
-  if (argc != 2) {
-    std::cerr << "Expected a filename, sorry.\n";
-    return EXIT_FAILURE;
+main(int argc, char** argv) try {
+  namespace opts = boost::program_options;
+
+  std::size_t width, height;
+  std::string filename;
+
+  opts::options_description desc{"Oxatrace options"};
+  desc.add_options()
+    ("help", "this cruft")
+    ("width,w",
+      opts::value<std::size_t>(&width)->default_value(640),
+      "width of the result image")
+    ("height,h",
+      opts::value<std::size_t>(&height)->default_value(480),
+      "height of the result image")
+    ("output,o",
+      opts::value<std::string>(&filename),
+      "filename of the output")
+    ;
+  opts::variables_map values;
+  opts::store(opts::parse_command_line(argc, argv, desc), values);
+  opts::notify(values);
+
+  if (values.count("help")) {
+    std::cout << desc << '\n';
+    return EXIT_SUCCESS;
   }
 
-  char const* filename{argv[1]};
+  if (filename.empty())
+    throw std::runtime_error{"Output filename must be specified"};
 
   progress_monitor monitor;
   monitor.change_phase("Building scene...");
@@ -61,7 +86,7 @@ main(int argc, char** argv) {
 
   std::unique_ptr<scene> sc{simple_scene::make(std::move(def))};
 
-  camera cam{640.0 / 480.0, PI / 2.0};
+  camera cam{double(width) / double(height), PI / 2.0};
   cam
     .rotate(Eigen::AngleAxisd{-PI / 18, vector3::UnitX()})
     .rotate(Eigen::AngleAxisd{PI / 15, vector3::UnitY()})
@@ -70,13 +95,13 @@ main(int argc, char** argv) {
   
   monitor.change_phase("Tracing rays...");
   
-  hdr_image result{640, 480};
+  hdr_image result{width, height};
   hdr_color const background{0.05, 0.05, 0.2};
 
   shading_policy shading_pol;
   shading_pol.background(background);
 
-  unsigned total = 640 * 480;
+  unsigned total = width * height;
   unsigned done  = 0;
 
   for (hdr_image::index y = 0; y < result.height(); ++y)
@@ -92,15 +117,15 @@ main(int argc, char** argv) {
 
   monitor.change_phase("Saving result image...");
 
-  double const avg_luminance = log_avg_luminance(result);
+  apply_reinhard(result, 0.3);
+  correct_gamma(result);
+  ldr_image const out = ldr_from_hdr(result);
 
-  save(
-    transform(result, [&] (hdr_image::pixel_type pixel) {
-      return to_ldr(gamma_correction()(reinhard(avg_luminance, 0.3)(pixel)));
-    }),
-    filename
-  );
+  save(out, filename);
 
   monitor.change_phase("Done");
+} catch (std::exception& e) {
+  std::cerr << "Error: " << e.what() << '\n';
+  return EXIT_FAILURE;
 }
 

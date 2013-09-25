@@ -59,6 +59,11 @@ public:
   const_channel_iterator
   end() const noexcept      { return channels_.end(); }
 
+  const_channel_iterator
+  cbegin() const noexcept   { return channels_.begin(); }
+  const_channel_iterator
+  cend() const noexcept     { return channels_.end(); }
+
   // Operators...
 
   // These work component-wise.

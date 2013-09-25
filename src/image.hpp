@@ -56,6 +56,11 @@ public:
   const_pixel_iterator
   end() const noexcept      { return pixels_.end(); }
 
+  const_pixel_iterator
+  cbegin() const noexcept   { return pixels_.begin(); }
+  const_pixel_iterator
+  cend() const noexcept     { return pixels_.end(); }
+
   // Get pixel at given coordinates.
   // Throws:
   //   -- std::logic_error: Coordinates out of bounds.
@@ -70,69 +75,7 @@ private:
 };
 
 using hdr_image = basic_image<hdr_color>;        // Channels in [0, infty)
-using ldr_float_image = basic_image<hdr_color>;  // Channels in [0, 1]
 using ldr_image = basic_image<ldr_color>;        // Channels in {0, ..., 255}
-
-// Provides a transformed view of an underlying image. Underlying image may
-// be basic_image or another transformed_image. Unlike basic_image, this
-// provides read-only access to individual pixels.
-//
-// transformed_image stores a reference to the base image; thus the base has
-// to have longer lifetime than this transformed_image, otherwise undefined
-// behaviour ensues.
-template <typename BaseImage, typename Transform>
-class transformed_image {
-  using base_image_t    = BaseImage;
-  using base_pixel_type = typename base_image_t::pixel_type;
-
-public:
-  // Types...
-
-  using pixel_type =
-    typename std::result_of<Transform(base_pixel_type)>::type;
-  using pixel_iterator =
-    decltype(boost::make_transform_iterator(
-      std::declval<typename base_image_t::const_pixel_iterator>(),
-      std::declval<Transform>()
-    ));
-  using const_pixel_iterator = pixel_iterator;
-  using index = typename base_image_t::index;
-
-  // Construction...
-
-  explicit
-  transformed_image(BaseImage const& base, Transform transform = Transform())
-    : base_(base)
-    , transform_{std::move(transform)}
-  { }
-
-  // Observers...
-
-  index width() const noexcept  { return base_.width(); }
-  index height() const noexcept { return base_.height(); }
-  index size() const noexcept   { return base_.size(); }
-
-  // Pixel access...
-
-  const_pixel_iterator
-  begin() const noexcept {
-    return boost::make_transform_iterator(base_.begin(), transform_);
-  }
-
-  const_pixel_iterator
-  end() const noexcept {
-    return boost::make_transform_iterator(base_.end(), transform_);
-  }
-
-  pixel_type const&
-  pixel_at(index x, index y) const {
-    return transform_(base_.pixel_at(x, y));
-  }
-
-private:
-  base_image_t const&   base_;
-  Transform             transform_;
-};
 
 // Get the log-average luminance of the picture. The formula used is
 //   L_avg = exp(1/N * sum(log(delta + L(x, y)))),
@@ -146,82 +89,33 @@ private:
 double
 log_avg_luminance(hdr_image const& image);
 
-// Make a transformed image.
-template <typename BaseImage, typename Transform>
-transformed_image<BaseImage, Transform>
-transform(BaseImage const& base, Transform transform) {
-  return transformed_image<BaseImage, Transform>(base, transform);
-}
+// An HDR-> LDR transform. Input pixels in range [0, 1] are linearly mapped
+// and rounded to byte pixel values {0, ..., 255}. Input pixels > 1 are mapped
+// to output 255, producing a burn-out should this occur.
+ldr_image
+ldr_from_hdr(hdr_image const& hdr);
 
-// A float LDR -> LDR transformer. The input is first clipped into the range
-// [0, 1], then spread into the range {0, ..., 255}. This should be used as
-// the last step in HDR -> LDR conversion process as it loses a great deal
-// of information.
-ldr_image::pixel_type
-to_ldr(ldr_float_image::pixel_type pixel);
+// Apply the exposure operator. This transforms the image via
+//   I_out = 1 - exp(I_in * -exposure),
+// where exposure is a parameter roughly corresponding to the exposition time
+// of a real-world film.
+void
+expose(hdr_image& image, double exposure);
 
-// A simple HDR -> LDR transformer that clips all HDR values to the range
-// [0, 1].
-ldr_float_image::pixel_type
-clip(hdr_image::pixel_type pixel);
+// Apply the Reinhard's operator. The key parameter affects the simulated
+// exposure of the resulting image.
+void
+apply_reinhard(hdr_image& image, double key = 1.8);
 
-// HDR -> float LDR transformer that mimics real film exposition. The exposure
-// parameter rougly corresponds to the exposition time.
-//
-// The formula used by this operator is
-//   I_out = 1 - exp(I_in * -exposure)
-class exposition {
-public:
-  exposition(double exposure) noexcept : exposure_{exposure} { }
-  double exposure() const noexcept { return exposure_; }
-
-  ldr_float_image::pixel_type
-  operator () (hdr_image::pixel_type pixel) const noexcept;
-
-private:
-  double exposure_;
-};
-
-// Applies Reinhard's operator. The key parameter affects the simulated
-// exposure of the resulting image. log_avg_luminance is the value computed
-// by the function of the same name.
-class reinhard {
-public:
-  reinhard(double log_avg_luminance, double key = 1.8) noexcept
-    : avg_{log_avg_luminance}
-    , key_{key} { }
-  double key() const noexcept { return key_; }
-
-  ldr_float_image::pixel_type
-  operator () (hdr_image::pixel_type pixel) const noexcept;
-
-private:
-  double avg_;
-  double key_;
-};
-
-// Perform gamma-correction. This is to be called on float LDR just before
-// its conversion to LDR.
-class gamma_correction {
-public:
-  gamma_correction(double gamma = 2.2) noexcept : gamma_{gamma} { }
-  double gamma() const noexcept { return gamma_; }
-
-  ldr_float_image::pixel_type
-  operator () (ldr_float_image::pixel_type pixel) const noexcept;
-
-private:
-  double gamma_;
-};
+// Perform gamma correction.
+void
+correct_gamma(hdr_image& image, double gamma = 2.2);
 
 // Save an LDR image into a PPM file.
 // Throws:
 //   -- std::ios_base::failure: I/O error.
-template <typename LDRImage>
-typename std::enable_if<
-  std::is_same<typename LDRImage::pixel_type::channel, std::uint8_t>::value
->::type
-save(LDRImage const& image, std::string const& filename);
+void
+save(ldr_image const& image, std::string const& filename);
 
 //
 // basic_image implementation
@@ -242,29 +136,6 @@ basic_image<PixelT>::pixel_at(index x, index y) const -> pixel_type const& {
       return pixels_[y * width_ + x];
   else
     throw std::logic_error{"image::pixel_at: Invalid coordinates"};
-}
-
-//
-// save implementation
-//
-
-template <typename LDRImage>
-typename std::enable_if<
-  std::is_same<typename LDRImage::pixel_type::channel, std::uint8_t>::value
->::type
-save(LDRImage const& image, std::string const& filename) {
-  std::ofstream out(filename.c_str());
-  out.exceptions(std::ios::badbit | std::ios::failbit);
-
-  // Header:
-  out << "P6\n"     // Binary PPM
-      << image.width() << ' ' << image.height() << '\n'
-      << "255\n";   // Max value of a single pixel.
-
-  // Data:
-  for (auto pixel : image)
-    for (auto channel : pixel)
-      out.put(channel);
 }
 
 } // namespace oxatrace

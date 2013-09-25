@@ -9,10 +9,19 @@
 # Configuration
 #
 
+CXX = g++-4.8
+
 include_paths = /usr/include/eigen3
-CXXFLAGS = -Wall -Wextra -std=c++11 -pedantic -msse4.2 \
+libraries = m boost_program_options
+
+# -Wno-unused-local-typedefs silences warnings from Eigen.
+CXXFLAGS = -Wall -Wextra -Wno-unused-local-typedefs -std=c++11 -pedantic \
+           -msse4.2 \
            $(foreach path,$(include_paths),-I$(path))
-LDFLAGS = -lm -pthread
+           
+# We want LDFLAGS to come before all object files and libs to come after them.
+LDFLAGS = -pthread
+libs = $(foreach lib,$(libraries),-l$(lib))
 
 mode ?= release
 
@@ -44,7 +53,7 @@ clean:
 	rm -f $(target) $(cxxobjects) $(depfiles)
 
 $(target) : $(objdir) $(cxxobjects) Makefile
-	$(CXX) $(LDFLAGS) $(cxxobjects) -o $@
+	$(CXX) $(LDFLAGS) $(cxxobjects) $(libs) -o $@
 
 $(cxxobjects) : $(objdir)/%.o : $(srcdir)/%.cpp
 	$(CXX) $(CXXFLAGS) $< -c -o $@ -MD -MF $(objdir)/$*.d
