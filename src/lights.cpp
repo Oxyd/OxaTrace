@@ -2,7 +2,7 @@
 
 using namespace oxatrace;
 
-point_light::point_light(vector3 const& p, oxatrace::hdr_color const& c)
+point_light::point_light(vector3 const& p, hdr_color const& c)
   : position_(p)
   , color_(c) { }
 
@@ -11,7 +11,7 @@ point_light::get_source() const {
   return position_;
 }
 
-oxatrace::hdr_color
+hdr_color
 point_light::color() const {
   return color_;
 }

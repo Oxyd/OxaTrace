@@ -23,7 +23,7 @@ public:
   hdr_color
   background() const noexcept { return background_; }
 
-  // Setting values...
+  // Modifiers...
 
   void
   background(hdr_color const& new_background) noexcept {

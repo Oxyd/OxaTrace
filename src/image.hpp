@@ -77,6 +77,8 @@ private:
 using hdr_image = basic_image<hdr_color>;        // Channels in [0, infty)
 using ldr_image = basic_image<ldr_color>;        // Channels in {0, ..., 255}
 
+// Operations...
+
 // Get the log-average luminance of the picture. The formula used is
 //   L_avg = exp(1/N * sum(log(delta + L(x, y)))),
 // where

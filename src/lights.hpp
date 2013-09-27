@@ -14,6 +14,11 @@ namespace oxatrace {
 // Intensity of this light source is implicitly defined by the given colour.
 class light {
 public:
+  // XXX: How is this useful? Every light is going to have a colour. What they
+  // are going to differ in, though, is their shape. Perhaps have light contain
+  // the colour and some abstract shape, and allow the shape to be sampled
+  // when needed for raytracing.
+
   virtual ~light() { }
 
   // Get a point in the light.
@@ -21,7 +26,7 @@ public:
   get_source() const = 0;
 
   // Get the colour of this light.
-  virtual oxatrace::hdr_color
+  virtual hdr_color
   color() const = 0;
 };
 
@@ -30,17 +35,17 @@ public:
 class point_light final : public light {
 public:
   // Construct a point light from the position of its only point and its colour.
-  point_light(vector3 const& pos, oxatrace::hdr_color const& col);
+  point_light(vector3 const& pos, hdr_color const& col);
 
   virtual vector3
   get_source() const override;
 
-  virtual oxatrace::hdr_color
+  virtual hdr_color
   color() const override;
 
 private:
-  vector3               position_;
-  oxatrace::hdr_color   color_;
+  vector3   position_;
+  hdr_color color_;
 };
 
 } // namespace oxatrace

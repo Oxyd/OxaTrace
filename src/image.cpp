@@ -49,8 +49,8 @@ oxatrace::ldr_from_hdr(hdr_image const& hdr) {
 hdr_image
 oxatrace::expose(hdr_image image, double exposure) {
   for (auto& pixel : image)
-    for (auto& c : pixel)
-      c = 1.0 - std::exp(c * -exposure);
+    for (auto& channel : pixel)
+      channel = 1.0 - std::exp(channel * -exposure);
   return image;
 }
 
@@ -78,13 +78,17 @@ oxatrace::correct_gamma(hdr_image image, double gamma) {
 
 void
 oxatrace::save(ldr_image const& image, std::string const& filename) {
+  std::string const BINARY_PPM_MAGIC = "P6";
+  unsigned const    MAX_PIXEL_VALUE  =
+    std::numeric_limits<ldr_image::pixel_type::channel>::max();
+
   std::ofstream out(filename.c_str());
   out.exceptions(std::ios::badbit | std::ios::failbit);
 
   // Header:
-  out << "P6\n"     // Binary PPM
+  out << BINARY_PPM_MAGIC << '\n'
       << image.width() << ' ' << image.height() << '\n'
-      << "255\n";   // Max value of a single pixel.
+      << MAX_PIXEL_VALUE << '\n';
 
   // Data:
   for (auto const& pixel : image)

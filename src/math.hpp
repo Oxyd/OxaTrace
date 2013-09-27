@@ -41,6 +41,12 @@ round(double d) noexcept { return static_cast<Integer>(d + 0.5); }
 // Vectors & Matrices
 //
 
+// A unit-length vector. Conversion from a vector to unit will automatically
+// divide the vector by its magnitude; conversion from unit to unit will be a
+// no-op.
+//
+// This will help document the interface of various parts of the code by clearly
+// specifying which part needs a unit vector and which doesn't.
 template <typename MatrixT>
 class unit : public MatrixT {
   static_assert(MatrixT::IsVectorAtCompileTime,
@@ -49,6 +55,8 @@ class unit : public MatrixT {
   struct enabler { };
 
 public:
+  // Construction...
+
   template <typename OtherMatrixT>
   unit(unit<OtherMatrixT> const& other)
     : MatrixT{other} { }
@@ -60,15 +68,13 @@ public:
   unit(Elems... elems)
     : MatrixT{normalized({std::forward<Elems>(elems)...})} {}
 
-  auto
-  norm() -> decltype(std::declval<MatrixT>().norm()) {
-    return 1.0;
-  }
+  // "Overrides"...
 
-  auto
-  squaredNorm() -> decltype(std::declval<MatrixT>().squaredNorm()) {
-    return 1.0;
-  }
+  decltype(std::declval<MatrixT>().norm())
+  norm() { return 1.0; }
+
+  decltype(std::declval<MatrixT>().squaredNorm())
+  squaredNorm() { return 1.0; }
 
 private:
   MatrixT
@@ -85,17 +91,19 @@ using vector3 = Eigen::Vector3d;
 using unit3   = unit<vector3>;
 
 // Get the cosine of the directed angle from v to u.
-template <typename Base1, typename Base2>
-auto
-cos_angle(
-  Eigen::MatrixBase<Base1> const& v,
-  Eigen::MatrixBase<Base2> const& u,
-  typename std::enable_if<
+template <
+  typename Base1, typename Base2,
+  typename = typename std::enable_if<
     Eigen::MatrixBase<Base1>::IsVectorAtCompileTime &&
     Eigen::MatrixBase<Base2>::IsVectorAtCompileTime &&
     static_cast<std::size_t>(Eigen::MatrixBase<Base1>::SizeAtCompileTime) ==
       static_cast<std::size_t>(Eigen::MatrixBase<Base2>::SizeAtCompileTime)
-  >::type* = 0
+  >::type
+>
+auto
+cos_angle(
+  Eigen::MatrixBase<Base1> const& v,
+  Eigen::MatrixBase<Base2> const& u
 ) -> decltype(u.dot(v)) 
 { return (u.dot(v)) / (u.norm() * v.norm()); }
 
@@ -123,14 +131,10 @@ public:
 
   // Observers...
   vector3
-  origin() const noexcept {
-    return origin_; 
-  }
+  origin() const noexcept       { return origin_; }
 
   vector3
-  direction() const noexcept {
-    return direction_; 
-  }
+  direction() const noexcept    { return direction_; }
 
 private:
   vector3 origin_;
@@ -161,10 +165,10 @@ public:
 
   // Observers...
   oxatrace::ray
-  ray() const noexcept { return ray_; }
+  ray() const noexcept      { return ray_; }
 
   double
-  param() const noexcept { return param_; }
+  param() const noexcept    { return param_; }
 
   vector3
   point() const;

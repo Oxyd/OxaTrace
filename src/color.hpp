@@ -83,6 +83,8 @@ private:
 using hdr_color = basic_color<double>;
 using ldr_color = basic_color<std::uint8_t>;
 
+// Operations...
+
 double
 luminance(hdr_color const& color);
 

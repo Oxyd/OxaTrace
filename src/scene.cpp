@@ -37,10 +37,10 @@ scene_definition::lights_end() const noexcept -> light_iterator {
   return lights_.end();
 }
 
-scene::intersection::intersection(ray_point const& rp,
-                                  oxatrace::solid const& s)
+scene::intersection::intersection(ray_point const& rp, oxatrace::solid const& s)
   : ray_point_{rp}
-  , solid_{s} { }
+  , solid_{s}
+{ }
 
 vector3
 scene::intersection::position() const {
