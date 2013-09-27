@@ -99,17 +99,17 @@ ldr_from_hdr(hdr_image const& hdr);
 //   I_out = 1 - exp(I_in * -exposure),
 // where exposure is a parameter roughly corresponding to the exposition time
 // of a real-world film.
-void
-expose(hdr_image& image, double exposure);
+hdr_image
+expose(hdr_image image, double exposure);
 
 // Apply the Reinhard's operator. The key parameter affects the simulated
 // exposure of the resulting image.
-void
-apply_reinhard(hdr_image& image, double key = 1.8);
+hdr_image
+apply_reinhard(hdr_image image, double key = 1.8);
 
 // Perform gamma correction.
-void
-correct_gamma(hdr_image& image, double gamma = 2.2);
+hdr_image
+correct_gamma(hdr_image image, double gamma = 2.2);
 
 // Save an LDR image into a PPM file.
 // Throws:

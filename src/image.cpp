@@ -46,15 +46,16 @@ oxatrace::ldr_from_hdr(hdr_image const& hdr) {
   return result;
 }
 
-void
-oxatrace::expose(hdr_image& image, double exposure) {
+hdr_image
+oxatrace::expose(hdr_image image, double exposure) {
   for (auto& pixel : image)
     for (auto& c : pixel)
       c = 1.0 - std::exp(c * -exposure);
+  return image;
 }
 
-void
-oxatrace::apply_reinhard(hdr_image& image, double key) {
+hdr_image
+oxatrace::apply_reinhard(hdr_image image, double key) {
   double const avg_luminance = log_avg_luminance(image);
 
   for (auto& pixel : image) {
@@ -62,14 +63,17 @@ oxatrace::apply_reinhard(hdr_image& image, double key) {
     for (auto& channel : pixel)
       channel /= 1.0 + channel;
   }
+
+  return image;
 }
 
-void
-oxatrace::correct_gamma(hdr_image& image, double gamma) {
+hdr_image
+oxatrace::correct_gamma(hdr_image image, double gamma) {
   double const g = 1 / gamma;
   for (auto& pixel : image)
     for (auto& c : pixel)
       c = std::pow(c, g);
+  return image;
 }
 
 void

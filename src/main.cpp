@@ -117,9 +117,9 @@ main(int argc, char** argv) try {
 
   monitor.change_phase("Saving result image...");
 
-  apply_reinhard(result, 0.3);
-  correct_gamma(result);
-  ldr_image const out = ldr_from_hdr(result);
+  result = apply_reinhard(std::move(result), 0.3);
+  result = correct_gamma(std::move(result));
+  ldr_image const out = ldr_from_hdr(std::move(result));
 
   save(out, filename);
 
