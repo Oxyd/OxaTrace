@@ -7,6 +7,14 @@
 
 namespace oxatrace {
 
+/// \defgroup interface User interface
+
+/// \brief Thingy to allow bits and pieces of code to report their progress.
+/// \ingroup interface
+///
+/// Calculation progress is done in phases; the user is notified about each
+/// new phase of calculation. A phase may optionally display its progress;
+/// phase change resets progress back to zero.
 class progress_monitor {
 public:
   void

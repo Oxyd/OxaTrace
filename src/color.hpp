@@ -8,14 +8,21 @@
 
 namespace oxatrace {
 
-// Baisc colour is three channels in one. The representation, and thus the
-// range, of individual channels is given by the template parameter ChannelT.
-// Overflows are not detected and result in undefined behaviour.
-//
-// Basic colour supports all field operators as well as multiplication by scalar
-// of type ChannelT.
-//
-// The channel type must not throw exceptions.
+/// \defgroup color Colour handling
+
+/// \brief Colour value of a single pixel.
+///
+/// Basic colour is three channels in one. The representation, and thus the
+/// range, of individual channels is given by the template parameter ChannelT.
+/// Overflows are not detected and result in undefined behaviour.
+///
+/// Basic colour supports all field operators as well as multiplication by
+/// scalar of type ChannelT.
+///
+/// The channel type must not throw exceptions.
+///
+/// \nosubgrouping
+/// \ingroup color
 template <typename ChannelT>
 class basic_color
   : boost::field_operators<basic_color<ChannelT>>
@@ -23,32 +30,36 @@ class basic_color
   , boost::dividable<basic_color<ChannelT>, ChannelT>
 {
 public:
-  static constexpr std::size_t CHANNELS{3};
+  static constexpr std::size_t CHANNELS{3};  ///< Number of channels in a pixel.
 
 private:
   using channel_list = std::array<ChannelT, CHANNELS>;
   
 public:
-  // Types...
-
+  /// \name Types
+  ///@{
   using channel                 = ChannelT;
   using channel_iterator        = typename channel_list::iterator;
   using const_channel_iterator  = typename channel_list::const_iterator;
-  
-  // Construction...
+  ///@}
 
-  basic_color() noexcept { }  // Leaves channels uninitialised
+  /// \name Construction
+  ///@{
+  basic_color() noexcept { }  ///< Leaves channels uninitialised
   basic_color(channel r, channel g, channel b) noexcept;
+  ///@}
 
-  // Observers...
-
+  /// \name Observers
+  ///@{
   channel&
   operator [] (std::size_t i) noexcept          { return channels_[i]; }
 
   channel const&
   operator [] (std::size_t i) const noexcept    { return channels_[i]; }
+  ///@}
 
-  // Iterator access over all channels.
+  /// \name Iterating over channels
+  ///@{
   channel_iterator
   begin() noexcept          { return channels_.begin(); }
   channel_iterator
@@ -63,30 +74,44 @@ public:
   cbegin() const noexcept   { return channels_.begin(); }
   const_channel_iterator
   cend() const noexcept     { return channels_.end(); }
+  ///@}
 
-  // Operators...
-
-  // These work component-wise.
+  /// \name Component-wise operators
+  ///@{
   basic_color& operator += (basic_color other) noexcept;
   basic_color& operator -= (basic_color other) noexcept;
   basic_color& operator *= (basic_color other) noexcept;
   basic_color& operator /= (basic_color other) noexcept;
+  ///@}
 
-  // These multiply/divide each channel separately.
+  /// \name Scalar operators
+  ///@{
   basic_color& operator *= (ChannelT d) noexcept;
   basic_color& operator /= (ChannelT d) noexcept;
+  ///@}
 
 private:
   channel_list channels_;
 };
 
+/// \name basic_color typedefs
+///@{
+
+/// \ingroup color
 using hdr_color = basic_color<double>;
 using ldr_color = basic_color<std::uint8_t>;
 
-// Operations...
+///@}
 
+/// \name basic_color operations
+///@{
+
+/// \ingroup color
+/// \brief Get the luminance of a pixel.
 double
 luminance(hdr_color const& color);
+
+///@}
 
 //
 // basic_color implementation...

@@ -37,6 +37,7 @@ endif
 
 srcdir	   = src
 objdir     = $(mode)
+docdir     = doc
 target     = $(objdir)/oxatrace
 cxxsources = $(wildcard $(srcdir)/*.cpp)
 cxxobjects = $(patsubst $(srcdir)/%.cpp,$(objdir)/%.o,$(cxxsources))
@@ -44,13 +45,17 @@ depfiles   = $(patsubst $(srcdir)/%.cpp,$(objdir)/%.d,$(cxxsources))
 
 -include $(depfiles)
 
-.PHONY: all clean
+.PHONY: all clean doc
 .DEFAULT_GOAL = all
 
 all: $(target)
 
 clean:
 	rm -f $(target) $(cxxobjects) $(depfiles)
+	rm -rf $(docdir)
+
+doc:
+	doxygen Doxyfile
 
 $(target) : $(objdir) $(cxxobjects) Makefile
 	$(CXX) $(LDFLAGS) $(cxxobjects) $(libs) -o $@

@@ -7,11 +7,12 @@
 
 using namespace oxatrace;
 
-// Our pinhole camera points forward along the vector (0, 0, 1) from the
-// origin. In order to generate rays, we calculate the coordinates of the four
-// corners of our film, and then interpolate between these corners every time
-// shooting a ray originating on the film and going through the origin of the
-// camera space.
+/// \class oxatrace::camera
+/// \internal
+/// In order to generate rays, we calculate the coordinates of the four
+/// corners of our film, and then interpolate between these corners every time,
+/// shooting a ray originating on the film and going through the origin of the
+/// camera space.
 
 camera::camera(double aspect_ratio, double field_of_view)
   : camera_to_world_{Eigen::Affine3d::Identity()}
