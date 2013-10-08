@@ -149,8 +149,8 @@ expose(hdr_image image, double exposure);
 ///
 /// Each channel is transformed by
 /// \f{align*}{
-///   I' &= I_\mathrm{in} \cdot \frac{\mathrm{key}}{L_\mathrm{avg}} \\ 
-///   I_\mathrm{out} &= \frac{I'}{1 + I'} \text{,}
+///   I' &= I_\mathrm{in} \cdot \frac{\mathrm{key}}{L_\mathrm{avg}} 
+///\\ I_\mathrm{out} &= \frac{I'}{1 + I'} \text{,}
 /// \f}
 /// where key is a positive parameter and \f$L_\mathrm{avg}\f$ is log-average
 /// luminance as returned by \ref log_avg_luminance.
