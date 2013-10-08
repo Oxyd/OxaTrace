@@ -82,7 +82,7 @@ oxatrace::save(ldr_image const& image, std::string const& filename) {
   unsigned const    MAX_PIXEL_VALUE  =
     std::numeric_limits<ldr_image::pixel_type::channel>::max();
 
-  std::ofstream out(filename.c_str());
+  std::ofstream out(filename.c_str(), std::ios::out | std::ios::binary);
   out.exceptions(std::ios::badbit | std::ios::failbit);
 
   // Header:
