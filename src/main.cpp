@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <functional>
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -22,9 +23,10 @@ main(int argc, char** argv) try {
 
   std::size_t width, height;
   std::string filename;
+  double gamma;
 
-  opts::options_description desc{"Oxatrace options"};
-  desc.add_options()
+  opts::options_description general{"General options"};
+  general.add_options()
     ("help", "this cruft")
     ("width,w",
       opts::value<std::size_t>(&width)->default_value(640),
@@ -36,17 +38,59 @@ main(int argc, char** argv) try {
       opts::value<std::string>(&filename),
       "filename of the output")
     ;
+
+  opts::options_description tone_mapping{"Tone mapping options"};
+  tone_mapping.add_options()
+    ("no-tone-mapping",
+      opts::bool_switch(),
+      "Disable tone-mapping entirely")
+    ("reinhard,r",
+      opts::value<double>()->implicit_value(0.18, "0.18")->value_name("key"),
+      "Tone-map the image using Reinhard's operator (this is the default).")
+    ("exposure,e",
+      opts::value<double>(),
+      "Use the exposure operator. The argument corresponds to the exposition "
+      "time")
+    ("gamma,g",
+      opts::value<double>(&gamma)->default_value(2.2, "2.2"),
+      "Use this value of gamma for gamma-correction. Value of 0 or 1 disables "
+      "gamma-correction.")
+    ;
+
+  opts::options_description all_options{"Allowed options"};
+  all_options.add(general).add(tone_mapping);
+
   opts::variables_map values;
-  opts::store(opts::parse_command_line(argc, argv, desc), values);
+  opts::store(opts::parse_command_line(argc, argv, all_options), values);
   opts::notify(values);
 
   if (values.count("help")) {
-    std::cout << desc << '\n';
+    std::cout << all_options << '\n';
     return EXIT_SUCCESS;
   }
 
   if (filename.empty())
     throw std::runtime_error{"Output filename must be specified"};
+
+  if (values.count("reinhard") && values.count("exposure"))
+    throw std::runtime_error{"Cannot specify both --reinhard and --exposure"};
+
+  std::function<hdr_image(hdr_image)> tone_mapper;
+  if (!values["no-tone-mapping"].as<bool>()) {
+    if (values.count("exposure")) {
+      double e = values["exposure"].as<double>();
+      tone_mapper = [e] (hdr_image in) {
+        return expose(std::move(in), e);
+      };
+    } else {
+      // Default to Reinhard.
+      double r =
+        values.count("reinhard") ? values["reinhard"].as<double>() : 0.18;
+      tone_mapper = [r] (hdr_image in) {
+        return apply_reinhard(std::move(in), r);
+      };
+    }
+  }
 
   progress_monitor monitor;
   monitor.change_phase("Building scene...");
@@ -117,10 +161,12 @@ main(int argc, char** argv) try {
 
   monitor.change_phase("Saving result image...");
 
-  result = apply_reinhard(std::move(result), 0.3);
-  result = correct_gamma(std::move(result));
-  ldr_image const out = ldr_from_hdr(std::move(result));
+  if (tone_mapper)
+    result = tone_mapper(std::move(result));
+  if (gamma > EPSILON)
+    result = correct_gamma(std::move(result), gamma);
 
+  ldr_image const out = ldr_from_hdr(std::move(result));
   save(out, filename);
 
   monitor.change_phase("Done");
