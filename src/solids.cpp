@@ -129,7 +129,7 @@ material::material(hdr_color const& ambient, double diffuse, double specular,
 }
 
 hdr_color
-material::add_light(
+material::blend_light(
   hdr_color const& base_color, unit3 const& normal,
   hdr_color const& light_color, unit3 const& light_dir
 ) const {
@@ -165,7 +165,7 @@ material::add_light(
 }
 
 hdr_color
-material::add_reflection(hdr_color const& base_color,
+material::blend_reflection(hdr_color const& base_color,
                          hdr_color const& reflection_color) const
 { return base_color + reflection_color * reflectance_; }
 

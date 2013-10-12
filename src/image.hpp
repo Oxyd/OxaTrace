@@ -141,7 +141,7 @@ ldr_from_hdr(hdr_image const& hdr);
 /// where exposure is a positive parameter roughly corresponding to the
 /// exposition time.
 ///
-/// \todo This should throw when exposure is non-positive.
+/// \throw std::logic_error exposure is non-positive.
 hdr_image
 expose(hdr_image image, double exposure);
 
@@ -155,7 +155,7 @@ expose(hdr_image image, double exposure);
 /// where key is a positive parameter and \f$L_\mathrm{avg}\f$ is log-average
 /// luminance as returned by \ref log_avg_luminance.
 ///
-/// \todo This should throw when key is non-positive.
+/// \throw std::logic_error key is non-positive.
 hdr_image
 apply_reinhard(hdr_image image, double key = 0.18);
 

@@ -114,7 +114,7 @@ public:
   ///                    light from the intersection point.
   /// \param light_color Colour of the light illuminating the solid.
   hdr_color
-  add_light(
+  blend_light(
     hdr_color const& base_color, unit3 const& normal,
     hdr_color const& light_color, unit3 const& light_dir
   ) const;
@@ -124,8 +124,8 @@ public:
   /// Given a computed colour value of a reflected ray, update the resulting ray
   /// colour.
   hdr_color
-  add_reflection(hdr_color const& base_color,
-                 hdr_color const& reflection_color) const;
+  blend_reflection(hdr_color const& base_color,
+                   hdr_color const& reflection_color) const;
 
 private:
   hdr_color ambient_;

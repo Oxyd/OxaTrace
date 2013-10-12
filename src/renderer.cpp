@@ -25,7 +25,7 @@ do_shade(scene const& scene, ray const& ray, shading_policy const& policy,
           (l.get_source() - i->position()).squaredNorm())
         continue;  // Obstacle blocks direct path from light to solid
 
-    result = i->solid().material().add_light(
+    result = i->solid().material().blend_light(
       result, i->normal(), l.color(), light_dir
     );
   }
@@ -36,7 +36,7 @@ do_shade(scene const& scene, ray const& ray, shading_policy const& policy,
   hdr_color const reflection = do_shade(
     scene, reflected, policy, depth + 1, reflection_importance * importance
   );
-  result = i->solid().material().add_reflection(result, reflection);
+  result = i->solid().material().blend_reflection(result, reflection);
 
   return result;
 }
