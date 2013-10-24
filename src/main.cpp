@@ -101,15 +101,15 @@ main(int argc, char** argv) try {
   material const sphere_material{sphere_color, 0.4, 0.8, 100, 0.1};
 
   auto sphere1 = make_unique<solid>(sphere_shape, sphere_material);
-  sphere1->
-     scale(3.0)
+  (*sphere1)
+    .scale(3.0)
     .translate({0, 3, -15})
     ;
   def.add_solid(std::move(sphere1));
 
   auto sphere2 = make_unique<solid>(sphere_shape, sphere_material);
-  sphere2->
-     scale(3.0)
+  (*sphere2)
+    .scale(3.0)
     .translate({-8, 3, -15})
     ;
   def.add_solid(std::move(sphere2));
@@ -118,8 +118,8 @@ main(int argc, char** argv) try {
     std::make_shared<oxatrace::plane>(),
     material{hdr_color{0.5, 0.5, 0.5}, 0.5, 0.5, 200, 0.1}
   );
-  plane->
-     rotate(Eigen::AngleAxisd{PI / 2., vector3::UnitX()})
+  (*plane)
+    .rotate(Eigen::AngleAxisd{PI / 2., vector3::UnitX()})
     ;
   def.add_solid(std::move(plane));
 
