@@ -13,7 +13,7 @@ namespace oxatrace {
 // program look too queer to you.
 //
 // I should also mention that unlike the future std::make_uniqe, my poor
-// implementation only support non-array types. Forgive me my imperfections,
+// implementation only support non-array types. Forgive me for my imperfections,
 // dear future programmer.
 
 template <typename T, typename... Args>

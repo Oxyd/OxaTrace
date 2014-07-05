@@ -73,3 +73,41 @@ ray_point::point() const {
   return *point_;
 }
 
+oxatrace::rectangle::rectangle(double x, double y, double width, double height)
+  : x_{x}
+  , y_{y}
+  , width_{width}
+  , height_{height}
+{
+  if (width_ <= 0.0 || height_ <= 0.0)
+    throw std::logic_error{"rectangle::rectangle: nonpositive dimension"};
+}
+
+void
+oxatrace::rectangle::width(double new_width) {
+  if (new_width > 0.0)
+    width_ = new_width;
+  else
+    throw std::logic_error{"rectangle::width: nonpositive dimension"};
+}
+
+void
+oxatrace::rectangle::height(double new_height) {
+  if (new_height > 0.0)
+    height_ = new_height;
+  else
+    throw std::logic_error{"rectangle::height: nonpositive dimension"};
+}
+
+oxatrace::rectangle
+oxatrace::rect_from_center(vector2 center, double width, double height) {
+  return {
+    center[0] - width / 2, center[1] - height / 2,
+    width, height
+  };
+}
+
+oxatrace::vector2
+oxatrace::rect_center(rectangle r) {
+  return {r.x() + r.width() / 2.0, r.y() + r.height() / 2.0};
+}

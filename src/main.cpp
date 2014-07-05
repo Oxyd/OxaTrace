@@ -145,16 +145,21 @@ main(int argc, char** argv) try {
   shading_policy shading_pol;
   shading_pol.background(background);
 
+  double const pixel_width  = 1.0 / result.width();
+  double const pixel_height = 1.0 / result.height();
+
   unsigned total = width * height;
   unsigned done  = 0;
 
   for (hdr_image::index y = 0; y < result.height(); ++y)
     for (hdr_image::index x = 0; x < result.width(); ++x) {
-      double const cam_u = double(x) / double(result.width());
-      double const cam_v = double(y) / double(result.height());
+      double const top_left_x = double(x) / double(result.width());
+      double const top_left_y = double(y) / double(result.height());
       
-      ray const r = cam.make_ray(cam_u, cam_v);
-      result.pixel_at(x, y) = shade(*sc, r, shading_pol);
+      result.pixel_at(x, y) = sample(
+        *sc, cam, {top_left_x, top_left_y, pixel_width, pixel_height},
+        shading_pol
+      );
 
       monitor.update_progress((double) ++done / (double) total);
     }

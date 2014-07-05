@@ -1,5 +1,3 @@
-/// \file math.hpp
-
 #ifndef OXATRACE_MATH_HPP
 #define OXATRACE_MATH_HPP
 
@@ -15,60 +13,37 @@
 
 namespace oxatrace {
 
-/// \defgroup math Maths
-
-/// \defgroup numbers Numbers
-/// \ingroup math
-
-/// \name Constants
-///@{
-
-/// \ingroup numbers
-
 constexpr double PI{3.141592};
-constexpr double EPSILON{1e-8};  ///< Minimal difference between numbers before
-                                 ///< they are considered equal.
+constexpr double EPSILON{1e-8};  // Minimal difference between numbers before
+                                 // they are considered equal.
 
-///@}
-
-/// \name Operations
-///@{
-
-/// \ingroup numbers
-
-/// \brief Compare doubles for equality.
-/// \return true iff the two numbers differ by less than EPSILON.
+// Compare doubles for near-equality.
+// Returns true iff the two numbers differ by less than EPSILON.
 inline bool
 double_eq(double a, double b) noexcept {
   return std::fabs(a - b) < EPSILON;
 }
 
-/// \brief Compare doubles for inequality.
-/// \return The opposite of double_eq.
+// Compare doubles for
+// Returns the opposite of double_eq.
 inline bool
 double_neq(double a, double b) noexcept {
   return !double_eq(a, b);
 }
 
-/// \brief Round a floating-point number to an integer.
+// Round a floating-point number to an integer.
 template <typename Integer>
 Integer
 round(double d) noexcept { return static_cast<Integer>(d + 0.5); }
 
-///@}
-
-/// \defgroup vector Vectors
-/// \ingroup math
-
-/// \brief Unit-length vector.
-/// \ingroup vector
-///
-/// Conversion from a vector to \ref unit will automatically divide the vector
-/// by its magnitude; conversion from unit to unit is a no-op.
-///
-/// This is to help document the interface of various parts of the code and
-/// to prevent bugs that stem from using non-unit length vectors where a
-/// unit-length one is expected.
+// Unit-length vector.
+//
+// Conversion from a vector to unit will automatically divide the vector by its
+// magnitude; conversion from unit to unit is a no-op.
+//
+// This is to help document the interface of various parts of the code and to
+// prevent bugs that stem from using non-unit length vectors where a unit-length
+// one is expected.
 template <typename MatrixT>
 class unit : public MatrixT {
   static_assert(MatrixT::IsVectorAtCompileTime,
@@ -83,13 +58,11 @@ public:
 
   unit(unit const&) = default;
 
-  /// \brief Forwarding constructor.
+  // Forwarding constructor.
   template <typename... Elems>
   unit(Elems... elems);
 
-  /// \name Overrides
-  ///@{
-  /// These override (in a sense of static polymorphism) functions from MatrixT.
+  // These override (in a sense of static polymorphism) functions from MatrixT.
 
   decltype(std::declval<MatrixT>().norm())
   norm() { return 1.0; }
@@ -97,11 +70,9 @@ public:
   decltype(std::declval<MatrixT>().squaredNorm())
   squaredNorm() { return 1.0; }
 
-  ///@}
-
 private:
-  /// \brief Return v normalized.
-  /// \throw std::invalid_argument When v is a zero vector.
+  // Return v
+  // Throws std::invalid_argument when v is a zero vector.
   MatrixT
   normalized(MatrixT const& v) {
     double const norm_2{v.squaredNorm()};
@@ -112,13 +83,12 @@ private:
   }
 };
 
-/// \ingroup vector
-///@{
-
 using vector3 = Eigen::Vector3d;
+using vector2 = Eigen::Vector2d;
 using unit3   = unit<vector3>;
+using unit2   = unit<vector2>;
 
-/// \brief Get the cosine of the directed angle from v to u.
+// Get the cosine of the directed angle from v to u.
 template <
   typename Base1, typename Base2,
   typename = typename std::enable_if<
@@ -135,26 +105,20 @@ cos_angle(
 ) -> decltype(u.dot(v)) 
 { return (u.dot(v)) / (u.norm() * v.norm()); }
 
-/// \brief Get any vector perpendicular to the given one.
+// Get any vector perpendicular to the given one.
 unit3
 get_any_orthogonal(unit3 const& v);
 
-/// \brief Get the vector reflected off a surface, given the normal vector of
-/// the surface.
+// Get the vector reflected off a surface, given the normal vector of the
+// surface.
 unit3
 reflect(unit3 const& v, unit3 const& normal);
 
-///@}
-
-/// \defgroup rays Rays
-/// \ingroup math
-
-/// \ingroup rays
-/// A ray is defined by its origin and direction; it is immutable.
-///
-/// Direction isn't required to be a unit vector in order to allow for
-/// transformations of rays: A point on ray -- as given by \ref point_at --
-/// depends on the length of the direction vector.
+// A ray is defined by its origin and direction; it is immutable.
+//
+// Direction isn't required to be a unit vector in order to allow for
+// transformations of rays: A point on ray -- as given by point_at -- depends on
+// the length of the direction vector.
 class ray {
 public:
   ray(vector3 const& origin, vector3 const& dir)
@@ -172,37 +136,26 @@ private:
   vector3 direction_;
 };
 
-/// \ingroup rays
-///@{
-
-/// \brief Streaming support.
 std::ostream&
 operator << (std::ostream& out, ray const& ray);
 
-/// \brief Transform a ray by an affine matrix.
+// Transform a ray by an affine matrix.
 oxatrace::ray
 transform(ray const& ray, Eigen::Affine3d const& tr);
 
-/// \brief Get a point on ray.
-///
-/// Given a parametric ray \f$r \;:\; [0, \infty) \to \mathbb{R}^3\f$, compute
-/// \f$r(t)\f$.
-///
-/// \throws std::logic_error t is negative.
+// Get a point on ray.
+//
+// Throws std::logic_error when t is negative.
 vector3
 point_at(ray const& r, double t);
 
-///@}
-
-/// \brief Lazily evaluated point on ray.
-/// \ingroup rays
-///
-/// This holds a \ref ray and a parameter for \ref point_at. It will lazily
-/// compute a point on the ray, and cache the result to avoid further
-/// re-evaluation.
+// Lazily evaluated point on ray.
+//
+// This holds a ray and a parameter for point_at. It will lazily compute a point
+// on the ray, and cache the result to avoid further re-evaluation.
 class ray_point {
 public:
-  /// \throws std::logic_error t is negative.
+  // Throws std::logic_error when t is negative.
   ray_point(oxatrace::ray const& ray, double param);
 
   oxatrace::ray
@@ -211,7 +164,7 @@ public:
   double
   param() const noexcept    { return param_; }
 
-  /// \brief Compute the point on ray or fetch the cached one.
+  // Compute the point on ray or fetch the cached one.
   vector3
   point() const;
 
@@ -227,6 +180,42 @@ template <typename MatrixT>
 template <typename... Elems>
 unit<MatrixT>::unit(Elems... elems)
   : MatrixT{normalized({std::forward<Elems>(elems)...})} {}
+
+// Two-dimensional rectangle in an unspecified space.
+//
+// Merely a container for four doubles.
+class rectangle {
+public:
+  rectangle() { }
+
+  // Throws std::range_error if width or height is nonpositive.
+  rectangle(double x, double y, double width, double height);
+
+  double x() const noexcept { return x_; }
+  double y() const noexcept { return y_; }
+  void   x(double new_x) { x_ = new_x; }
+  void   y(double new_y) { y_ = new_y; }
+
+  double width() const noexcept  { return width_; }
+  double height() const noexcept { return height_; }
+
+  // These throw std::range_error if the new dimension is nonpositive.
+  void   width(double new_width);
+  void   height(double new_height);
+
+private:
+  double x_, y_;           // Coordinates of the top-left corner.
+  double width_, height_;  // Dimensions of the rectangle.
+};
+
+// Construct a rectangle given coordinates of its centre point and its
+// dimensions.
+rectangle
+rect_from_center(vector2 center, double width, double height);
+
+// Get the point in the centre of a rectangle.
+vector2
+rect_center(rectangle r);
 
 }  // namespace oxatrace
 

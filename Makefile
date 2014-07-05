@@ -9,7 +9,7 @@
 # Configuration
 #
 
-CXX = g++-4.8
+CXX = g++
 
 include_paths = /usr/include/eigen3
 libraries = m boost_program_options
@@ -18,7 +18,7 @@ libraries = m boost_program_options
 CXXFLAGS = -Wall -Wextra -Wno-unused-local-typedefs -std=c++11 -pedantic \
            -msse4.2 \
            $(foreach path,$(include_paths),-I$(path))
-           
+
 # We want LDFLAGS to come before all object files and libs to come after them.
 LDFLAGS = -pthread
 libs = $(foreach lib,$(libraries),-l$(lib))

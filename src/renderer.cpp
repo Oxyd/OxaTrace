@@ -1,5 +1,6 @@
 #include "renderer.hpp"
 
+#include "camera.hpp"
 #include "scene.hpp"
 #include "solids.hpp"
 
@@ -64,4 +65,22 @@ hdr_color
 oxatrace::shade(scene const& scene, ray const& ray,
                 shading_policy const& policy) {
   return do_shade(scene, ray, policy, 0, 1.0);
+}
+
+hdr_color
+oxatrace::sample(scene const& scene, camera const& cam, rectangle pixel,
+                 shading_policy const& policy) {
+  double const w4 = pixel.width() / 4.0;
+  double const h4 = pixel.height() / 4.0;
+  vector2 const points[]{
+    {pixel.x() + w4,       pixel.y() + h4},
+    {pixel.x() + 3.0 * w4, pixel.y() + h4},
+    {pixel.x() + w4,       pixel.y() + 3.0 * h4},
+    {pixel.x() + 3.0 * w4, pixel.y() + 3.0 * h4}
+  };
+  
+  hdr_color result{0.0, 0.0, 0.0};
+  for (auto const& p : points)
+    result += (1.0 / 4.0) * shade(scene, cam.make_ray(p[0], p[1]), policy);
+  return result;
 }
