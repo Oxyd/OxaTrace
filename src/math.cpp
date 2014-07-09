@@ -4,6 +4,9 @@
 
 using namespace oxatrace;
 
+std::default_random_engine
+oxatrace::prng;
+
 unit3
 oxatrace::get_any_orthogonal(unit3 const& v) {
   // If u is the solution, it holds that <v, u> = 0, or
@@ -110,4 +113,14 @@ oxatrace::rect_from_center(vector2 center, double width, double height) {
 oxatrace::vector2
 oxatrace::rect_center(rectangle r) {
   return {r.x() + r.width() / 2.0, r.y() + r.height() / 2.0};
+}
+
+bool
+oxatrace::within(rectangle inner, rectangle outer) {
+  return
+    inner.x() - outer.x() >= -EPSILON
+    && inner.y() - outer.y() >= -EPSILON
+    && inner.x() + inner.width() - (outer.x() + outer.width()) <= EPSILON
+    && inner.y() + inner.height() - (outer.y() + outer.height()) <= EPSILON
+    ;
 }

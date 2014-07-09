@@ -24,6 +24,7 @@ main(int argc, char** argv) try {
   std::size_t width, height;
   std::string filename;
   double gamma;
+  unsigned supersampling;
 
   opts::options_description general{"General options"};
   general.add_options()
@@ -39,6 +40,15 @@ main(int argc, char** argv) try {
       "filename of the output")
     ;
 
+  opts::options_description render{"Rendering options"};
+  render.add_options()
+    ("no-jitter", opts::bool_switch(), "Disable jittering.")
+    ("supersampling,s",
+     opts::value<unsigned>(&supersampling)->default_value(4),
+     "Supersampling level. Value of 1 disables supersampling. Must be a"
+     "power of 2.")
+    ;
+  
   opts::options_description tone_mapping{"Tone mapping options"};
   tone_mapping.add_options()
     ("no-tone-mapping",
@@ -58,7 +68,7 @@ main(int argc, char** argv) try {
     ;
 
   opts::options_description all_options{"Allowed options"};
-  all_options.add(general).add(tone_mapping);
+  all_options.add(general).add(render).add(tone_mapping);
 
   opts::variables_map values;
   opts::store(opts::parse_command_line(argc, argv, all_options), values);
@@ -74,6 +84,9 @@ main(int argc, char** argv) try {
 
   if (values.count("reinhard") && values.count("exposure"))
     throw std::runtime_error{"Cannot specify both --reinhard and --exposure"};
+
+  if (!is_power2(supersampling))
+    throw std::runtime_error{"Supersampling value not a power of 2"};
 
   std::function<hdr_image(hdr_image)> tone_mapper;
   if (!values["no-tone-mapping"].as<bool>()) {
@@ -143,7 +156,9 @@ main(int argc, char** argv) try {
   hdr_color const background{0.05, 0.05, 0.2};
 
   shading_policy shading_pol;
-  shading_pol.background(background);
+  shading_pol.background = background;
+  shading_pol.jitter = !values["no-jitter"].as<bool>();
+  shading_pol.supersampling = supersampling;
 
   double const pixel_width  = 1.0 / result.width();
   double const pixel_height = 1.0 / result.height();

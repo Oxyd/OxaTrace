@@ -7,6 +7,7 @@
 #include <boost/optional.hpp>
 
 #include <initializer_list>
+#include <random>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -35,6 +36,14 @@ double_neq(double a, double b) noexcept {
 template <typename Integer>
 Integer
 round(double d) noexcept { return static_cast<Integer>(d + 0.5); }
+
+inline bool
+is_power2(unsigned n) {
+  return n > 0 && (n & (n - 1)) == 0;
+}
+
+// Pseudo-random number generator engine to be used thoroughout the program.
+extern std::default_random_engine prng;
 
 // Unit-length vector.
 //
@@ -196,6 +205,8 @@ public:
   void   x(double new_x) { x_ = new_x; }
   void   y(double new_y) { y_ = new_y; }
 
+  vector2 top_left() const noexcept { return {x(), y()}; }
+
   double width() const noexcept  { return width_; }
   double height() const noexcept { return height_; }
 
@@ -216,6 +227,10 @@ rect_from_center(vector2 center, double width, double height);
 // Get the point in the centre of a rectangle.
 vector2
 rect_center(rectangle r);
+
+// Is one rectangle (non-strictly) inside another?
+bool
+within(rectangle inner, rectangle outer);
 
 }  // namespace oxatrace
 

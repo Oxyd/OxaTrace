@@ -17,18 +17,16 @@ public:
   // Throws std::out_of_range when field_of_view is not in (0, pi).
   camera(double aspect_ratio, double field_of_view);
 
-  // Creates a ray corresponding to a position \f$(u, v)\f$ on the film.
-  // Throws std::out_of_range when (u, v) is not in [0, 1]^2.
-  ray
-  make_ray(double u, double v) const;
+  // Creates a ray corresponding to a position (u, v) on the film.  Throws
+  // std::out_of_range when (u, v) is not in [0, 1]^2.
+  ray make_ray(double u, double v) const;
+  ray make_ray(vector2 pos) const { return make_ray(pos.x(), pos.y()); }
 
   // Translate the camera in space.
-  camera&
-  translate(vector3 const& tr);
+  camera& translate(vector3 const& tr);
 
   // Rotate the camera in space.
-  camera&
-  rotate(Eigen::AngleAxisd const& rot);
+  camera& rotate(Eigen::AngleAxisd const& rot);
 
 private:
   Eigen::Affine3d   camera_to_world_;

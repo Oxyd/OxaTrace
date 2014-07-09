@@ -1,21 +1,35 @@
 #include "renderer.hpp"
 
 #include "camera.hpp"
+#include "math.hpp"
 #include "scene.hpp"
 #include "solids.hpp"
 
+#include <array>
+#include <numeric>
+
 using namespace oxatrace;
+
+static bool
+should_continue(unsigned current_depth, double current_importance,
+                shading_policy const& policy) {
+  if (current_importance < 0.0 || current_importance > 1.0)
+    throw std::logic_error{"should_continue: importance outside [0, 1]"};
+
+  return current_depth <= policy.max_depth
+    && current_importance >= policy.min_importance;
+}
 
 static hdr_color
 do_shade(scene const& scene, ray const& ray, shading_policy const& policy,
          unsigned depth, double importance)
 {
-  if (!policy.should_continue(depth, importance))
-    return policy.background();
+  if (!should_continue(depth, importance, policy))
+    return policy.background;
 
   boost::optional<scene::intersection> i = scene.intersect_solid(ray);
   if (!i)
-    return policy.background();
+    return policy.background;
 
   hdr_color result{i->solid().material().base_color()};
   for (light const& l : scene.lights()) {
@@ -42,45 +56,244 @@ do_shade(scene const& scene, ray const& ray, shading_policy const& policy,
   return result;
 }
 
-bool
-oxatrace::shading_policy::should_continue(
-  unsigned current_depth, double current_importance
-) const
-{
-  if (current_importance < 0.0 || current_importance > 1.0)
-    throw std::logic_error{"shading_policy: importance outside [0, 1]"};
-
-  return current_depth <= max_depth_ && current_importance >= min_importance_;
-}
-
-void
-oxatrace::shading_policy::min_importance(double new_min_importance) {
-  if (new_min_importance < 0.0 || new_min_importance > 1.0)
-    throw std::invalid_argument{"shader: min importance out of range"};
-
-  min_importance_ = new_min_importance;
-}
-
 hdr_color
 oxatrace::shade(scene const& scene, ray const& ray,
                 shading_policy const& policy) {
   return do_shade(scene, ray, policy, 0, 1.0);
 }
 
+// A subpixel is subdivided into four further subpixels, like so:
+//
+//   +-----+
+//   |  |  |
+//   +--+--+
+//   |  |  |
+//   +-----+
+//
+// When sampling a subpixel, we'll send a ray through each of the four corners.
+// If the resulting colours differ too much, we'll then repeat the process
+// recursively on each of the four subpixels. This process stops at a depth
+// given by shading_policy::supersampling.
+//
+// In order to only trace as many pixels as necessary, we'll first divide
+// the entire pixel into the apropriate number of subpixels (supersampling^2 of
+// them), and each of these subpixels gets a slot in an array. Every time a ray
+// is traced, the result is stored in this array. When subpixel_sample is called
+// recursively, one of the four corners of the current subpixel may already
+// have been sampled -- the result will be found in the array and there won't be
+// any need to sample it again.
+
+namespace {
+  class subpixel;
+
+  // This is a container for pixel subsamples. The bulk of the job is handled
+  // by subpixel.
+  class pixel_samples {
+  public:
+    using sample_list = std::vector<boost::optional<hdr_color>>;
+    
+    pixel_samples(rectangle pixel, unsigned side);
+    
+    subpixel view();
+
+    sample_list::reference  at(unsigned x, unsigned y);
+    sample_list::value_type at(unsigned x, unsigned y) const;
+    
+    void add(vector2 point, hdr_color sample);
+
+    sample_list::const_iterator begin() const { return samples_.begin(); }
+    sample_list::const_iterator end() const   { return samples_.end(); }
+    sample_list::size_type      size() const  { return samples_.size(); }
+
+    rectangle region() const { return region_; }
+    unsigned  side() const   { return side_; }
+
+  private:
+    sample_list samples_;
+    rectangle   region_;
+    unsigned    side_;
+  };
+
+  class subpixel {
+  public:
+    static unsigned constexpr top_left     = 0;
+    static unsigned constexpr top_right    = 1;
+    static unsigned constexpr bottom_left  = 2;
+    static unsigned constexpr bottom_right = 3;
+    static std::array<unsigned, 4> constexpr corners{
+      top_left, top_right, bottom_left, bottom_right
+    };
+
+    subpixel(pixel_samples const& samples);
+    subpixel(pixel_samples const& samples,
+             unsigned x, unsigned y, unsigned side);
+    
+    bool      empty() const;
+    rectangle region() const;
+    unsigned  side() const { return side_; }
+
+    subpixel corner(unsigned corner) const;
+
+  private:
+    pixel_samples const& samples_;
+    unsigned             offset_x_, offset_y_;
+    unsigned             side_;
+  };
+}
+
+pixel_samples::pixel_samples(rectangle pixel, unsigned supersampling)
+  : samples_(supersampling * supersampling)
+  , region_{pixel}
+  , side_{supersampling}
+{
+  assert(is_power2(supersampling));
+}
+
+subpixel
+pixel_samples::view() {
+  return {*this, 0, 0, side_};
+}
+
+auto
+pixel_samples::at(unsigned x, unsigned y) -> sample_list::reference {
+  return samples_[y * side_ + x];
+}
+
+auto
+pixel_samples::at(unsigned x, unsigned y) const -> sample_list::value_type {
+  return samples_[y * side_ + x];
+}
+
+void
+pixel_samples::add(vector2 point, hdr_color sample) {
+  vector2 const offset = point - region_.top_left();
+  assert(offset.x() >= 0.0 && offset.x() < region_.width());
+  assert(offset.y() >= 0.0 && offset.y() < region_.height());
+
+  unsigned const x = (unsigned) (offset.x() * side_ / region_.width());
+  unsigned const y = (unsigned) (offset.y() * side_ / region_.height());
+
+  assert(x < side_);
+  assert(y < side_);
+  
+  assert(!samples_[y * side_ + x]);
+  samples_[y * side_ + x] = sample;
+}
+
+decltype(subpixel::corners) constexpr subpixel::corners;
+
+subpixel::subpixel(pixel_samples const& samples)
+  : subpixel(samples, 0, 0, samples.side()) { }
+
+subpixel::subpixel(pixel_samples const& samples, unsigned x, unsigned y,
+                   unsigned side)
+  : samples_{samples}
+  , offset_x_{x}
+  , offset_y_{y}
+  , side_{side}
+{
+  assert(is_power2(side));
+  assert(offset_x_ < samples_.side());
+  assert(offset_y_ < samples_.side());
+  assert(within(region(), samples_.region()));
+}
+
+bool
+subpixel::empty() const {
+  for (unsigned x = offset_x_; x < offset_x_ + side_; ++x)
+    for (unsigned y = offset_y_; y < offset_y_ + side_; ++y)
+      if (samples_.at(x, y)) return false;
+
+  return true;
+}
+
+rectangle
+subpixel::region() const {
+  double const w = samples_.region().width() / samples_.side();
+  double const h = samples_.region().height() / samples_.side();
+  double const width = side_ * w;
+  double const height = side_ * h;
+  double const x = samples_.region().x() + offset_x_ * w;
+  double const y = samples_.region().y() + offset_y_ * h;
+  return {x, y, width, height};
+}
+
+subpixel
+subpixel::corner(unsigned c) const {
+  assert(c >= corners.front() && c <= corners.back());
+  assert(side_ > 1);
+
+  unsigned s = side_ / 2;
+
+  return {samples_, offset_x_ + s * (c % 2), offset_y_ + s * (c / 2), s};
+}
+
+namespace {
+  // Result of sampling a point in a pixel.
+  struct sample_result {
+    hdr_color color;
+    vector2   point;  // The point the sample was taken from, relative to the
+                      // pixel's top left corner.
+  };
+}
+
+// Take exactly one sample from the given pixel. Selects a point uniformly
+// randomly from within the pixel and traces a ray through it.
+static void
+sample_one(scene const& scene, camera const& cam, rectangle pixel,
+           shading_policy const& policy, pixel_samples& samples) {
+  std::uniform_real_distribution<> x_jitter_distrib{0, pixel.width()};
+  std::uniform_real_distribution<> y_jitter_distrib{0, pixel.height()};
+
+  double const x_mu = pixel.width() / 2;
+  double const y_mu = pixel.height() / 2;
+
+  vector2 const offset =
+    policy.jitter
+      ? vector2{x_jitter_distrib(prng), y_jitter_distrib(prng)}
+      : vector2{x_mu, y_mu}
+      ;
+  vector2 const point = pixel.top_left() + offset;
+  hdr_color const color = shade(scene, cam.make_ray(point), policy);
+
+  samples.add(point, color);
+}
+
+// Sample a rectangular sub-pixel, recursing as necessary.
+static void
+subpixel_sample(scene const& scene, camera const& cam,
+                shading_policy const& policy, subpixel const& pixel,
+                pixel_samples& samples) {
+  if (pixel.side() == 1) {
+    // No further subdivision of this subpixel.
+    if (pixel.empty())
+      sample_one(scene, cam, pixel.region(), policy, samples);
+    return;
+  }
+
+  for (auto corner_index : subpixel::corners) {
+    subpixel corner = pixel.corner(corner_index);
+
+    if (corner.empty()) {
+      sample_one(scene, cam, corner.region(), policy, samples);
+      assert(!corner.empty());
+    }
+  }
+
+  for (auto corner_index : subpixel::corners)
+    subpixel_sample(scene, cam, policy, pixel.corner(corner_index), samples);
+}
+
 hdr_color
 oxatrace::sample(scene const& scene, camera const& cam, rectangle pixel,
                  shading_policy const& policy) {
-  double const w4 = pixel.width() / 4.0;
-  double const h4 = pixel.height() / 4.0;
-  vector2 const points[]{
-    {pixel.x() + w4,       pixel.y() + h4},
-    {pixel.x() + 3.0 * w4, pixel.y() + h4},
-    {pixel.x() + w4,       pixel.y() + 3.0 * h4},
-    {pixel.x() + 3.0 * w4, pixel.y() + 3.0 * h4}
-  };
-  
-  hdr_color result{0.0, 0.0, 0.0};
-  for (auto const& p : points)
-    result += (1.0 / 4.0) * shade(scene, cam.make_ray(p[0], p[1]), policy);
-  return result;
+  pixel_samples samples{pixel, policy.supersampling};
+  subpixel_sample(scene, cam, policy, {samples}, samples);
+
+  return std::accumulate(
+    samples.begin(), samples.end(), hdr_color{},
+    [] (hdr_color accum, boost::optional<hdr_color> const& sample) {
+      return sample ? accum + *sample : accum;
+    }
+  ) / samples.size();
 }

@@ -14,33 +14,12 @@ namespace oxatrace {
 // Stop condition is based on maximum recursion depth and minimal ray
 // importance: Recursion will stop if it has either gone too deep or when
 // sampling an additional ray would contribute too little to the overall result.
-class shading_policy {
-public:
-  bool
-  should_continue(unsigned current_depth, double current_importance) const;
-
-  hdr_color
-  background() const noexcept { return background_; }
-
-  void
-  background(hdr_color const& new_background) noexcept {
-    background_ = new_background;
-  }
-
-  void
-  max_depth(unsigned new_max_depth) noexcept {
-    max_depth_ = new_max_depth;
-  }
-
-  // Set minimal importance for importance sampling.
-  // Throws: std::invalid_argument new_min_importance isn't in [0, 1].
-  void
-  min_importance(double new_min_importance);
-
-private:
-  hdr_color background_     = {0.0, 0.0, 0.0};
-  unsigned  max_depth_      = 16;
-  double    min_importance_ = EPSILON;
+struct shading_policy {
+  hdr_color background     = {0.0, 0.0, 0.0};
+  unsigned  max_depth      = 16;
+  double    min_importance = EPSILON;
+  bool      jitter         = true;
+  unsigned  supersampling  = 2;
 };
 
 class scene;
