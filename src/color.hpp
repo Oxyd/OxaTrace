@@ -78,6 +78,10 @@ using ldr_color = basic_color<std::uint8_t>;
 double
 luminance(hdr_color const& color);
 
+// Get the distance between two colours.
+double
+distance(hdr_color x, hdr_color y);
+
 //
 // basic_color implementation...
 //

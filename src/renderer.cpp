@@ -8,6 +8,8 @@
 #include <array>
 #include <numeric>
 
+#include <iostream>
+
 using namespace oxatrace;
 
 static bool
@@ -84,22 +86,25 @@ oxatrace::shade(scene const& scene, ray const& ray,
 // any need to sample it again.
 
 namespace {
-  class subpixel;
+  class subpixel_ref;
 
   // This is a container for pixel subsamples. The bulk of the job is handled
   // by subpixel.
   class pixel_samples {
   public:
-    using sample_list = std::vector<boost::optional<hdr_color>>;
+    struct sample {
+      hdr_color value;
+      unsigned  weight;
+    };
+    
+    using sample_list = std::vector<sample>;
     
     pixel_samples(rectangle pixel, unsigned side);
     
-    subpixel view();
-
     sample_list::reference  at(unsigned x, unsigned y);
     sample_list::value_type at(unsigned x, unsigned y) const;
     
-    void add(vector2 point, hdr_color sample);
+    sample_list::reference add(vector2 point, sample sample);
 
     sample_list::const_iterator begin() const { return samples_.begin(); }
     sample_list::const_iterator end() const   { return samples_.end(); }
@@ -114,7 +119,7 @@ namespace {
     unsigned    side_;
   };
 
-  class subpixel {
+  class subpixel_ref {
   public:
     static unsigned constexpr top_left     = 0;
     static unsigned constexpr top_right    = 1;
@@ -124,20 +129,24 @@ namespace {
       top_left, top_right, bottom_left, bottom_right
     };
 
-    subpixel(pixel_samples const& samples);
-    subpixel(pixel_samples const& samples,
-             unsigned x, unsigned y, unsigned side);
-    
-    bool      empty() const;
+    subpixel_ref(pixel_samples& samples);
+    subpixel_ref(pixel_samples& samples,
+                 unsigned x, unsigned y, unsigned side);
+
+    boost::optional<pixel_samples::sample&>
+    get_any();
+
+    unsigned total_weight() const;
+
     rectangle region() const;
     unsigned  side() const { return side_; }
 
-    subpixel corner(unsigned corner) const;
+    subpixel_ref corner(unsigned corner) const;
 
   private:
-    pixel_samples const& samples_;
-    unsigned             offset_x_, offset_y_;
-    unsigned             side_;
+    pixel_samples& samples_;
+    unsigned       offset_x_, offset_y_;
+    unsigned       side_;
   };
 }
 
@@ -147,11 +156,6 @@ pixel_samples::pixel_samples(rectangle pixel, unsigned supersampling)
   , side_{supersampling}
 {
   assert(is_power2(supersampling));
-}
-
-subpixel
-pixel_samples::view() {
-  return {*this, 0, 0, side_};
 }
 
 auto
@@ -164,8 +168,8 @@ pixel_samples::at(unsigned x, unsigned y) const -> sample_list::value_type {
   return samples_[y * side_ + x];
 }
 
-void
-pixel_samples::add(vector2 point, hdr_color sample) {
+auto
+pixel_samples::add(vector2 point, sample sample) -> sample_list::reference {
   vector2 const offset = point - region_.top_left();
   assert(offset.x() >= 0.0 && offset.x() < region_.width());
   assert(offset.y() >= 0.0 && offset.y() < region_.height());
@@ -176,16 +180,18 @@ pixel_samples::add(vector2 point, hdr_color sample) {
   assert(x < side_);
   assert(y < side_);
   
-  assert(!samples_[y * side_ + x]);
+  assert(samples_[y * side_ + x].weight == 0);
   samples_[y * side_ + x] = sample;
+
+  return samples_[y * side_ + x];
 }
 
-decltype(subpixel::corners) constexpr subpixel::corners;
+decltype(subpixel_ref::corners) constexpr subpixel_ref::corners;
 
-subpixel::subpixel(pixel_samples const& samples)
-  : subpixel(samples, 0, 0, samples.side()) { }
+subpixel_ref::subpixel_ref(pixel_samples& samples)
+  : subpixel_ref(samples, 0, 0, samples.side()) { }
 
-subpixel::subpixel(pixel_samples const& samples, unsigned x, unsigned y,
+subpixel_ref::subpixel_ref(pixel_samples& samples, unsigned x, unsigned y,
                    unsigned side)
   : samples_{samples}
   , offset_x_{x}
@@ -198,17 +204,28 @@ subpixel::subpixel(pixel_samples const& samples, unsigned x, unsigned y,
   assert(within(region(), samples_.region()));
 }
 
-bool
-subpixel::empty() const {
+boost::optional<pixel_samples::sample&>
+subpixel_ref::get_any() {
+  for (unsigned x = offset_x_; x < offset_x_ + side_; ++x)
+    for (unsigned y = offset_y_; y < offset_y_ + side_; ++y) {
+      auto& sample = samples_.at(x, y);
+      if (sample.weight > 0) return sample;
+    }
+
+  return {};
+}
+
+unsigned
+subpixel_ref::total_weight() const {
+  unsigned weight{};
   for (unsigned x = offset_x_; x < offset_x_ + side_; ++x)
     for (unsigned y = offset_y_; y < offset_y_ + side_; ++y)
-      if (samples_.at(x, y)) return false;
-
-  return true;
+      weight += samples_.at(x, y).weight;
+  return weight;
 }
 
 rectangle
-subpixel::region() const {
+subpixel_ref::region() const {
   double const w = samples_.region().width() / samples_.side();
   double const h = samples_.region().height() / samples_.side();
   double const width = side_ * w;
@@ -218,8 +235,8 @@ subpixel::region() const {
   return {x, y, width, height};
 }
 
-subpixel
-subpixel::corner(unsigned c) const {
+subpixel_ref
+subpixel_ref::corner(unsigned c) const {
   assert(c >= corners.front() && c <= corners.back());
   assert(side_ > 1);
 
@@ -239,15 +256,16 @@ namespace {
 
 // Take exactly one sample from the given pixel. Selects a point uniformly
 // randomly from within the pixel and traces a ray through it.
-static void
+static pixel_samples::sample&
 sample_one(scene const& scene, camera const& cam, rectangle pixel,
-           shading_policy const& policy, pixel_samples& samples) {
+           shading_policy const& policy, unsigned weight,
+           pixel_samples& samples) {
   std::uniform_real_distribution<> x_jitter_distrib{0, pixel.width()};
   std::uniform_real_distribution<> y_jitter_distrib{0, pixel.height()};
 
   double const x_mu = pixel.width() / 2;
   double const y_mu = pixel.height() / 2;
-
+  
   vector2 const offset =
     policy.jitter
       ? vector2{x_jitter_distrib(prng), y_jitter_distrib(prng)}
@@ -256,32 +274,66 @@ sample_one(scene const& scene, camera const& cam, rectangle pixel,
   vector2 const point = pixel.top_left() + offset;
   hdr_color const color = shade(scene, cam.make_ray(point), policy);
 
-  samples.add(point, color);
+  return samples.add(point, {color, weight});
 }
 
 // Sample a rectangular sub-pixel, recursing as necessary.
 static void
 subpixel_sample(scene const& scene, camera const& cam,
-                shading_policy const& policy, subpixel const& pixel,
+                shading_policy const& policy, subpixel_ref pixel,
                 pixel_samples& samples) {
+  unsigned const weight = pixel.side() * pixel.side();
+  unsigned const weight_4 = weight / 4;
+
   if (pixel.side() == 1) {
     // No further subdivision of this subpixel.
-    if (pixel.empty())
-      sample_one(scene, cam, pixel.region(), policy, samples);
+    boost::optional<pixel_samples::sample&> sample = pixel.get_any();
+    if (!sample)
+      sample_one(scene, cam, pixel.region(), policy, weight, samples);
+    else
+      sample->weight = weight;
+
+    assert(pixel.total_weight() == weight);
     return;
   }
 
-  for (auto corner_index : subpixel::corners) {
-    subpixel corner = pixel.corner(corner_index);
+  auto const max_channel = std::numeric_limits<hdr_color::channel>::max();
+  auto const min_channel = std::numeric_limits<hdr_color::channel>::min();
+  hdr_color min{max_channel, max_channel, max_channel};
+  hdr_color max{min_channel, min_channel, min_channel};
 
-    if (corner.empty()) {
-      sample_one(scene, cam, corner.region(), policy, samples);
-      assert(!corner.empty());
+  for (auto corner_index : subpixel_ref::corners) {
+    subpixel_ref corner = pixel.corner(corner_index);
+    boost::optional<pixel_samples::sample&> sample = corner.get_any();
+
+    if (!sample)
+      sample = sample_one(scene, cam, corner.region(), policy,
+                          weight_4, samples);
+    else
+      sample->weight = weight_4;
+    
+    assert(corner.get_any());
+    assert(sample);
+    
+    for (std::size_t channel = 0; channel < hdr_color::CHANNELS; ++channel) {
+      if (sample->value[channel] > max[channel])
+        max[channel] = sample->value[channel];
+      if (sample->value[channel] < min[channel])
+        min[channel] = sample->value[channel];
     }
   }
 
-  for (auto corner_index : subpixel::corners)
-    subpixel_sample(scene, cam, policy, pixel.corner(corner_index), samples);
+  assert(pixel.total_weight() == weight);
+
+//  if (pixel.side() == 2) return;  // All four corners are filled already.
+
+  double const max_distance = 0.001;
+  double const dist = distance(min, max);
+
+  if (dist > max_distance) {
+    for (auto corner_index : subpixel_ref::corners)
+      subpixel_sample(scene, cam, policy, pixel.corner(corner_index), samples);
+  } 
 }
 
 hdr_color
@@ -290,10 +342,18 @@ oxatrace::sample(scene const& scene, camera const& cam, rectangle pixel,
   pixel_samples samples{pixel, policy.supersampling};
   subpixel_sample(scene, cam, policy, {samples}, samples);
 
-  return std::accumulate(
-    samples.begin(), samples.end(), hdr_color{},
-    [] (hdr_color accum, boost::optional<hdr_color> const& sample) {
-      return sample ? accum + *sample : accum;
-    }
-  ) / samples.size();
+  // for (auto const& s : samples)
+  //   std::cerr << s.weight << '\n';
+  // std::cerr << "---\n";
+
+  assert(std::accumulate(samples.begin(), samples.end(), 0u,
+                         [] (unsigned accum, pixel_samples::sample s) {
+                           return accum + s.weight;
+                         }) == samples.size());
+
+  hdr_color sum{{}, {}, {}};
+  for (auto const& sample : samples)
+    sum += sample.value * sample.weight;
+
+  return sum / samples.size();
 }
