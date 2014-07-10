@@ -8,8 +8,6 @@
 #include <array>
 #include <numeric>
 
-#include <iostream>
-
 using namespace oxatrace;
 
 static bool
@@ -325,8 +323,6 @@ subpixel_sample(scene const& scene, camera const& cam,
 
   assert(pixel.total_weight() == weight);
 
-//  if (pixel.side() == 2) return;  // All four corners are filled already.
-
   double const max_distance = 0.001;
   double const dist = distance(min, max);
 
@@ -341,10 +337,6 @@ oxatrace::sample(scene const& scene, camera const& cam, rectangle pixel,
                  shading_policy const& policy) {
   pixel_samples samples{pixel, policy.supersampling};
   subpixel_sample(scene, cam, policy, {samples}, samples);
-
-  // for (auto const& s : samples)
-  //   std::cerr << s.weight << '\n';
-  // std::cerr << "---\n";
 
   assert(std::accumulate(samples.begin(), samples.end(), 0u,
                          [] (unsigned accum, pixel_samples::sample s) {
