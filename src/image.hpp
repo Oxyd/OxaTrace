@@ -29,13 +29,12 @@ public:
   using index                 = std::size_t;
 
   // Create an image of given dimensions.
-  // Throws std::logic_error when dimensions are invalid.
   basic_image(index width, index height)
     : pixels_(width * height)
     , width_{width}
   {
-    if (width == 0 || height == 0)
-      throw std::logic_error{"basic_image: Cannot construct a zero-size image"};
+    if (width <= 0 || height <= 0)
+      throw std::range_error{"basic_image::basic_image"};
   }
 
   index width() const noexcept  { return width_; }
@@ -58,7 +57,7 @@ public:
   cend() const noexcept     { return pixels_.end(); }
 
   // Get pixel at given coordinates.
-  // Throws std::logic_error when coordinates are out of bounds
+  // Coordinates must be within the bounds of the image.
   pixel_type&
   pixel_at(index x, index y);
   pixel_type const&
@@ -110,7 +109,7 @@ ldr_from_hdr(hdr_image const& hdr);
 // where exposure is a positive parameter roughly corresponding to the
 // exposition time.
 //
-// Throws std::logic_error when exposure is non-positive.
+// exposure must be non-negative.
 hdr_image
 expose(hdr_image image, double exposure);
 
@@ -129,7 +128,7 @@ expose(hdr_image image, double exposure);
 // where key is a positive parameter and L_avg is log-average
 // luminance as returned by log_avg_luminance.
 //
-// Throws std::logic_error when key is non-positive.
+// key must be positive.
 hdr_image
 apply_reinhard(hdr_image image, double key = 0.18);
 

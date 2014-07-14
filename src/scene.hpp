@@ -80,14 +80,10 @@ public:
   public:
     intersection(ray_point const& rp, oxatrace::solid const& s);
 
-    vector3
-    position() const;
-
-    oxatrace::solid const&
-    solid() const { return solid_; }
-
-    unit<vector3>
-    normal() const;
+    vector3 position() const;
+    oxatrace::solid const& solid() const { return solid_; }
+    unit<vector3> normal() const;
+    hdr_color texture() const;
 
   private:
     ray_point       ray_point_;

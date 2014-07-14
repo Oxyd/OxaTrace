@@ -57,16 +57,15 @@ oxatrace::transform(ray const& ray, Eigen::Affine3d const& tr)
 
 Eigen::Vector3d
 oxatrace::point_at(ray const& r, double t) {
-  if (t >= 0.0)
-    return r.origin() + t * r.direction();
-  else
-    throw std::logic_error("point_at: t < 0.0");
+  assert(t >= 0.0);
+  return r.origin() + t * r.direction();
 }
 
 ray_point::ray_point(oxatrace::ray const& ray, double param)
   : ray_{ray}
-  , param_{param} {
-  if (param < 0.0) throw std::logic_error{"ray_point: param < 0.0"};
+  , param_{param}
+{
+  assert(param >= 0.0);
 }
 
 Eigen::Vector3d
@@ -82,24 +81,19 @@ oxatrace::rectangle::rectangle(double x, double y, double width, double height)
   , width_{width}
   , height_{height}
 {
-  if (width_ <= 0.0 || height_ <= 0.0)
-    throw std::logic_error{"rectangle::rectangle: nonpositive dimension"};
+  assert(width > 0.0 && height > 0.0);
 }
 
 void
 oxatrace::rectangle::width(double new_width) {
-  if (new_width > 0.0)
-    width_ = new_width;
-  else
-    throw std::logic_error{"rectangle::width: nonpositive dimension"};
+  assert(new_width > 0.0);
+  width_ = new_width;
 }
 
 void
 oxatrace::rectangle::height(double new_height) {
-  if (new_height > 0.0)
-    height_ = new_height;
-  else
-    throw std::logic_error{"rectangle::height: nonpositive dimension"};
+  assert(new_height > 0.0);
+  height_ = new_height;
 }
 
 oxatrace::rectangle

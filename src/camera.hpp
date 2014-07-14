@@ -14,11 +14,11 @@ namespace oxatrace {
 // rotated using the translate and rotate member functions.
 class camera {
 public:
-  // Throws std::out_of_range when field_of_view is not in (0, pi).
+  // field_of_view must be in (0, pi).
   camera(double aspect_ratio, double field_of_view);
 
   // Creates a ray corresponding to a position (u, v) on the film.  Throws
-  // std::out_of_range when (u, v) is not in [0, 1]^2.
+  // (u, v) must be in [0, 1]^2.
   ray make_ray(double u, double v) const;
   ray make_ray(vector2 pos) const { return make_ray(pos.x(), pos.y()); }
 

@@ -54,6 +54,11 @@ scene::intersection::normal() const {
   return *normal_;
 }
 
+hdr_color
+scene::intersection::texture() const {
+  return solid_.texture_at(ray_point_);
+}
+
 std::unique_ptr<simple_scene>
 simple_scene::make(scene_definition def) {
   return std::unique_ptr<simple_scene>{new simple_scene{std::move(def)}};

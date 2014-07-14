@@ -48,8 +48,7 @@ oxatrace::ldr_from_hdr(hdr_image const& hdr) {
 
 hdr_image
 oxatrace::expose(hdr_image image, double exposure) {
-  if (exposure < 0.0)
-    throw std::logic_error{"expose: exposure < 0"};
+  assert(exposure > 0.0);
   
   for (auto& pixel : image)
     for (auto& channel : pixel)
@@ -59,8 +58,7 @@ oxatrace::expose(hdr_image image, double exposure) {
 
 hdr_image
 oxatrace::apply_reinhard(hdr_image image, double key) {
-  if (key < 0.0)
-    throw std::logic_error{"apply_reinhard: key < 0"};
+  assert(key > 0.0);
   
   double const avg_luminance = log_avg_luminance(image);
 

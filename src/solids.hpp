@@ -42,6 +42,10 @@ public:
   // the one pointing out of the shape.
   virtual unit3
   normal_at(ray_point const& point) const = 0;
+
+  // Get texture coordinates for a point on this shape.
+  virtual vector2
+  texture_at(ray_point const& point) const = 0;
 };
 
 // Unit sphere centered around the origin.
@@ -52,6 +56,9 @@ public:
 
   virtual unit3
   normal_at(ray_point const&) const override;
+
+  virtual vector2
+  texture_at(ray_point const&) const override;
 };
 
 // The xy plane.
@@ -62,6 +69,45 @@ public:
 
   virtual unit3
   normal_at(ray_point const&) const override;
+
+  virtual vector2
+  texture_at(ray_point const&) const override;
+};
+
+// Texture is a map of surface colours of a solid. We support two kinds of
+// textures here: Image-based, where colours are given by a specified image,
+// and computed, where colours are given by an algorithm.
+class texture {
+public:
+  virtual
+  ~texture() { }
+
+  // Get a pixel that corresponds to coordinates (u, v). (u, v) must be in
+  // [0, 1]^2; the behaviour is undefined otherwise.
+  virtual hdr_color
+  get(double u, double v) const = 0;
+};
+
+// Checkerboard pattern computed texture.
+//
+// It alternates two colours, here called a and b:
+//
+//   +-----------+
+//   |  a  |  b  |
+//   |-----+-----+
+//   |  b  |  a  |
+//   +-----------+
+//
+class checkerboard final : public texture {
+public:
+  // The pattern will use regions of colours a and b.
+  checkerboard(hdr_color a, hdr_color b);
+
+  virtual hdr_color
+  get(double u, double v) const override;
+
+private:
+  hdr_color color_a, color_b;
 };
 
 // Material defines the various visual qualities of a solid. It is responsible
@@ -82,40 +128,12 @@ public:
   //
   // This is the colour the object should have even if it is unaffected by any 
   // light source. In other words, the ambient colour.
-  hdr_color
-  base_color() const { return ambient_; }
+  hdr_color base_color() const { return ambient_; }
 
-  // The reflectance of this material. 
-  //
-  // This is a value in range [0, 1].
-  double
-  reflectance() const { return reflectance_; }
-
-  // Update ray's colour.
-  //
-  // Given a light source directly visible from a given point, update the
-  // resulting ray colour accordingly. During ray tracing, call this function
-  // once for each directly visible light source for any given ray-solid
-  // intersection.
-  //
-  // -- base_color  The ray colour computed so far.
-  // -- normal      Surface normal at the point of intersection.
-  // -- light_dir   Direction (in world coordinates) toward the source of
-  //                light from the intersection point.
-  // -- light_color Colour of the light illuminating the solid.
-  hdr_color
-  blend_light(
-    hdr_color const& base_color, unit3 const& normal,
-    hdr_color const& light_color, unit3 const& light_dir
-  ) const;
-
-  // Update ray's colour after a reflection.
-  //
-  // Given a computed colour value of a reflected ray, update the resulting ray
-  // colour.
-  hdr_color
-  blend_reflection(hdr_color const& base_color,
-                   hdr_color const& reflection_color) const;
+  double reflectance() const { return reflectance_; }
+  double diffuse() const { return diffuse_; }
+  double specular() const { return specular_; }
+  unsigned specular_exponent() const { return specular_exponent_; }
 
 private:
   hdr_color ambient_;
@@ -132,7 +150,8 @@ private:
 class solid {
 public:
   // Construct a solid of a given shape.
-  solid(std::shared_ptr<oxatrace::shape> const& s, material mat);
+  solid(std::shared_ptr<oxatrace::shape> const& s, material mat,
+        std::shared_ptr<oxatrace::texture> const& texture = {});
 
   oxatrace::material const&
   material() const noexcept;
@@ -143,15 +162,18 @@ public:
   unit3
   normal_at(ray_point const& rp) const;
 
+  hdr_color
+  texture_at(ray_point const& rp) const;
+
+  void
+  set_texture(std::shared_ptr<texture> const& new_texture);
+
   // Translate this solid by a vector.
   solid&
   translate(vector3 const& tr);
 
-  // Scale this solid by a coefficient.
-  //
   // Scale this solid by a coefficient. All axes can be scaled by the same
   // amount, or different coefficient may be specified for each axis.
-  // 
   //
   // Throws std::invalid_argument: coef <= 0.0 or any of x, y, z <= 0.0.
   solid&
@@ -163,8 +185,6 @@ public:
   solid&
   rotate(Eigen::AngleAxisd const& rot);
 
-  // Transform this solid.
-  //
   // Apply a generic transformation to this solid. If an inverse transformation
   // is provided, it needs to be correct, otherwise undefined results will
   // occur. If it isn't provided, one will be calculated by inverting the given
@@ -176,9 +196,13 @@ public:
 
 private:
   std::shared_ptr<oxatrace::shape> shape_;
+  std::shared_ptr<texture>         texture_;
   oxatrace::material               material_;
   Eigen::Affine3d                  world_to_object_;
   Eigen::Affine3d                  object_to_world_;
+
+  ray_point
+  local_ray_point(ray_point const& global) const;
 };
 
 }  // namespace oxatrace

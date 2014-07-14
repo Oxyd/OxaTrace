@@ -110,8 +110,14 @@ main(int argc, char** argv) try {
 
   scene_definition def;
   auto sphere_shape = std::make_shared<oxatrace::sphere>();
-  hdr_color const sphere_color{1.0, 0.45, 0.65};
-  material const sphere_material{sphere_color, 0.4, 0.8, 100, 0.1};
+  auto plane_shape = std::make_shared<oxatrace::plane>();
+
+  auto plane_checker = std::make_shared<oxatrace::checkerboard>(
+    hdr_color{0.7, 0.7, 0.7}, hdr_color{0.8, 0.1, 0.1}
+  );
+  
+  hdr_color const sphere_color{0.4, 0.4, 0.6};
+  material const sphere_material{sphere_color, 0.4, 0.9, 50, 0.4};
 
   auto sphere1 = make_unique<solid>(sphere_shape, sphere_material);
   (*sphere1)
@@ -127,13 +133,13 @@ main(int argc, char** argv) try {
     ;
   def.add_solid(std::move(sphere2));
 
-  auto plane = make_unique<solid>(
-    std::make_shared<oxatrace::plane>(),
-    material{hdr_color{0.5, 0.5, 0.5}, 0.5, 0.5, 200, 0.1}
-  );
+  material const plane_material{hdr_color{0.5, 0.5, 0.5}, 0.5, 0.5, 200, 0.2};
+  auto plane = make_unique<solid>(plane_shape, plane_material, plane_checker);
   (*plane)
+    .scale(3.0)
     .rotate(Eigen::AngleAxisd{PI / 2., vector3::UnitX()})
     ;
+  
   def.add_solid(std::move(plane));
 
   def.add_light(

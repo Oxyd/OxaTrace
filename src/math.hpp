@@ -80,15 +80,15 @@ public:
   squaredNorm() { return 1.0; }
 
 private:
-  // Return v
-  // Throws std::invalid_argument when v is a zero vector.
+  // Return a vector parallel to v and with the same orientation, but with
+  // unit length.
+  //
+  // v must be nonzero.
   MatrixT
   normalized(MatrixT const& v) {
     double const norm_2{v.squaredNorm()};
-    if (double_neq(norm_2, 0.0))
-      return v / std::sqrt(norm_2);
-    else
-      throw std::invalid_argument{"unit: Given a zero vector"};
+    assert(double_neq(norm_2, 0.0));
+    return v / std::sqrt(norm_2);
   }
 };
 
@@ -154,7 +154,7 @@ transform(ray const& ray, Eigen::Affine3d const& tr);
 
 // Get a point on ray.
 //
-// Throws std::logic_error when t is negative.
+// t must be non-negative.
 vector3
 point_at(ray const& r, double t);
 
@@ -164,7 +164,7 @@ point_at(ray const& r, double t);
 // on the ray, and cache the result to avoid further re-evaluation.
 class ray_point {
 public:
-  // Throws std::logic_error when t is negative.
+  // param must be non-negative.
   ray_point(oxatrace::ray const& ray, double param);
 
   oxatrace::ray
@@ -197,7 +197,7 @@ class rectangle {
 public:
   rectangle() { }
 
-  // Throws std::range_error if width or height is nonpositive.
+  // width and height must be positive.
   rectangle(double x, double y, double width, double height);
 
   double x() const noexcept { return x_; }
@@ -210,7 +210,6 @@ public:
   double width() const noexcept  { return width_; }
   double height() const noexcept { return height_; }
 
-  // These throw std::range_error if the new dimension is nonpositive.
   void   width(double new_width);
   void   height(double new_height);
 

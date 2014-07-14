@@ -10,6 +10,50 @@
 
 using namespace oxatrace;
 
+static hdr_color
+blend_light(
+  material const& material,
+  hdr_color const& base_color, unit3 const& normal,
+  hdr_color const& light_color, unit3 const& light_dir
+) {
+  // We're using the Phong shading model here, which is an empiric one without
+  // much basis in real physics. Aside from the ambient term (which is there
+  // to simulate background light which "just happens" in real life), we have
+  // the diffuse and specular terms. Each of these two is weighted by the
+  // two respective parameters of the constructor. The intensity of diffuse
+  // or specular highlight depends on how directly the light shines on the
+  // given surface -- in other words, the cosine of the angle between surface
+  // normal and the direction of the light source.
+  //
+  // Together, we have the formula for the intensity of one light source:
+  //
+  //                                                   specular_exponent
+  //   I = diffuse * cos(alpha) + specular * cos(alpha),
+  //
+  // To add colours into the mix, we then multiply the light's colour with
+  // its computed intensity.
+  //
+  // XXX: This should take distance to the light source into account as well.
+
+  double const cos_alpha = cos_angle(normal, light_dir);
+
+  if (cos_alpha <= 0.0) return material.base_color();
+
+  hdr_color const diffuse_color = light_color * material.diffuse() * cos_alpha;
+  hdr_color const specular_color =
+    light_color * material.specular()
+    * std::pow(cos_alpha, material.specular_exponent());
+
+  return base_color + diffuse_color + specular_color;
+}
+
+static hdr_color
+blend_reflection(material const& material, hdr_color const& base_color,
+                 hdr_color const& reflection_color)
+{
+  return base_color + reflection_color * material.reflectance();
+}
+
 static bool
 should_continue(unsigned current_depth, double current_importance,
                 shading_policy const& policy) {
@@ -31,7 +75,7 @@ do_shade(scene const& scene, ray const& ray, shading_policy const& policy,
   if (!i)
     return policy.background;
 
-  hdr_color result{i->solid().material().base_color()};
+  hdr_color result = i->texture();
   for (light const& l : scene.lights()) {
     unit3 const light_dir{l.get_source() - i->position()};
 
@@ -40,8 +84,8 @@ do_shade(scene const& scene, ray const& ray, shading_policy const& policy,
           (l.get_source() - i->position()).squaredNorm())
         continue;  // Obstacle blocks direct path from light to solid
 
-    result = i->solid().material().blend_light(
-      result, i->normal(), l.color(), light_dir
+    result = blend_light(
+      i->solid().material(), result, i->normal(), l.color(), light_dir
     );
   }
 
@@ -51,7 +95,7 @@ do_shade(scene const& scene, ray const& ray, shading_policy const& policy,
   hdr_color const reflection = do_shade(
     scene, reflected, policy, depth + 1, reflection_importance * importance
   );
-  result = i->solid().material().blend_reflection(result, reflection);
+  result = blend_reflection(i->solid().material(), result, reflection);
 
   return result;
 }

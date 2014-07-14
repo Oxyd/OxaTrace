@@ -84,6 +84,29 @@ sphere::normal_at(ray_point const& rp) const {
   return rp.point();
 }
 
+vector2
+sphere::texture_at(ray_point const& rp) const {
+  // We'll use the equations suggested at
+  // http://en.wikipedia.org/wiki/UV_mapping :
+  //
+  //             atan(d.z / d.x)
+  //   u = 0.5 + ---------------
+  //                  2 pi
+  //
+  //             asin(d.y)
+  //   v = 0.5 - ---------
+  //                pi
+  
+  unit3 const d = -normal_at(rp);
+  double const u = 0.5 + atan2(d.z(), d.x()) / 2 * PI;
+  double const v = 0.5 - asin(d.y()) / PI;
+
+  assert(0.0 <= u && u <= 1.0);
+  assert(0.0 <= v && v <= 1.0);
+
+  return {u, v};
+}
+
 auto plane::intersect(ray const& ray) const -> intersection_list {
   // Since this is an xy plane, we're solving the equation o_z + td_z = 0,
   // where o_z and d_z are the z components of the ray origin and direction
@@ -112,6 +135,38 @@ plane::normal_at(ray_point const& rp) const {
     return vector3::UnitZ();
 }
 
+vector2
+plane::texture_at(ray_point const& rp) const {
+  // Planes are infinite, so we'll just pretend we're texturing a square, and
+  // let the texture repeat across the entire plane.
+  //
+  // So get the point coordinates into [0, 1]^2 by taking just the fractional
+  // part of the point coordinates, and simply return that.
+
+  double dummy;
+
+  double u = std::modf(rp.point().x(), &dummy);
+  double v = std::modf(rp.point().y(), &dummy);
+
+  if (u < 0.0) u += 1.0;  // Not abs, to prevent weird things as we cross 0.
+  if (v < 0.0) v += 1.0;
+
+  assert(0 <= u && u <= 1.0);
+  assert(0 <= v && v <= 1.0);
+
+  return {u, v};
+}
+
+checkerboard::checkerboard(hdr_color a, hdr_color b)
+  : color_a{a}
+  , color_b{b}
+{ }
+
+hdr_color
+checkerboard::get(double u, double v) const {
+  return (u <= 0.5) != (v <= 0.5) ? color_b : color_a;
+}
+
 material::material(hdr_color const& ambient, double diffuse, double specular,
                    unsigned specular_exponent, double reflectance)
   : ambient_{ambient}
@@ -128,49 +183,10 @@ material::material(hdr_color const& ambient, double diffuse, double specular,
     throw std::invalid_argument{"material: Invalid reflectance value."};
 }
 
-hdr_color
-material::blend_light(
-  hdr_color const& base_color, unit3 const& normal,
-  hdr_color const& light_color, unit3 const& light_dir
-) const {
-  // We're using the Phong shading model here, which is an empiric one without
-  // much basis in real physics. Aside from the ambient term (which is there
-  // to simulate background light which "just happens" in real life), we have
-  // the diffuse and specular terms. Each of these two is weighted by the
-  // two respective parameters of the constructor. The intensity of diffuse
-  // or specular highlight depends on how directly the light shines on the
-  // given surface -- in other words, the cosine of the angle between surface
-  // normal and the direction of the light source.
-  //
-  // Together, we have the formula for the intensity of one light source:
-  //
-  //                                                   specular_exponent
-  //   I = diffuse * cos(alpha) + specular * cos(alpha),
-  //
-  // To add colours into the mix, we then multiply the light's colour with
-  // its computed intensity.
-  //
-  // XXX: This should take distance to the light source into account as well.
-
-  double const cos_alpha = cos_angle(normal, light_dir);
-
-  if (cos_alpha <= 0.0) return base_color;
-
-  hdr_color const diffuse_color{light_color * diffuse_ * cos_alpha};
-  hdr_color const specular_color{
-    light_color * specular_ * std::pow(cos_alpha, specular_exponent_)
-  };
-
-  return base_color + diffuse_color + specular_color;
-}
-
-hdr_color
-material::blend_reflection(hdr_color const& base_color,
-                         hdr_color const& reflection_color) const
-{ return base_color + reflection_color * reflectance_; }
-
-solid::solid(std::shared_ptr<oxatrace::shape> const& s, oxatrace::material mat)
+solid::solid(std::shared_ptr<oxatrace::shape> const& s, oxatrace::material mat,
+             std::shared_ptr<texture> const& texture)
   : shape_{s}
+  , texture_{texture}
   , material_{mat}
   , world_to_object_{Eigen::Affine3d::Identity()}
   , object_to_world_{Eigen::Affine3d::Identity()} { }
@@ -188,10 +204,23 @@ solid::intersect(ray const& ray) const {
 
 unit3
 solid::normal_at(ray_point const& rp) const {
-  vector3 const local_normal = shape_->normal_at(
-    {oxatrace::transform(rp.ray(), world_to_object_), rp.param()}
-  );
+  vector3 const local_normal = shape_->normal_at(local_ray_point(rp));
   return object_to_world_.linear().transpose() * local_normal;
+}
+
+hdr_color
+solid::texture_at(ray_point const& rp) const {
+  if (texture_) {
+    vector2 const uv = shape_->texture_at(local_ray_point(rp));
+    return texture_->get(uv[0], uv[1]);
+  } else {
+    return material_.base_color();
+  }
+}
+
+void
+solid::set_texture(std::shared_ptr<texture> const& new_texture) {
+  texture_ = new_texture;
 }
 
 solid&
@@ -246,4 +275,9 @@ solid&
 solid::transform(Eigen::Affine3d const& tr) {
   Eigen::Affine3d inverse = tr.inverse();
   return transform(tr, inverse);
+}
+
+ray_point
+solid::local_ray_point(ray_point const& global) const {
+  return {oxatrace::transform(global.ray(), world_to_object_), global.param()};
 }
