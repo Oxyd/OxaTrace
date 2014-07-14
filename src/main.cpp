@@ -9,11 +9,17 @@
 #include <boost/program_options.hpp>
 
 #include <algorithm>
+#include <atomic>
+#include <chrono>
 #include <cstddef>
 #include <functional>
 #include <iostream>
+#include <mutex>
+#include <stdexcept>
 #include <string>
 #include <sstream>
+#include <thread>
+#include <vector>
 
 using namespace oxatrace;
 
@@ -88,6 +94,122 @@ textured_ball() {
   return def;
 }
 
+class renderer_pool {
+public:
+  renderer_pool(unsigned threads, hdr_image& destination, scene const& scene,
+                camera const& camera, shading_policy const& sp)
+    : num_threads_(threads)
+    , current_job_index_{0}
+    , destination_(destination)
+    , scene_(scene)
+    , camera_(camera)
+    , shading_policy_(sp)
+  {
+    if (num_threads_ == 0)
+      throw std::out_of_range{"renderer_pool: Can't do 0 threads"};
+    
+    hdr_image::index const total_pixels
+      = destination.width() * destination.height();
+    for (hdr_image::index i = 0; i < total_pixels; i += job_size)
+      jobs_.push_back(i);
+  }
+
+  renderer_pool(renderer_pool const&) = delete;
+
+  ~renderer_pool() { finish(); }
+
+  void
+  run() {
+    for (unsigned i = 0; i < num_threads_; ++i)
+      threads_.push_back(std::thread([this] { worker(); }));
+  }
+
+  void
+  finish() {
+    for (auto& thread : threads_)
+      thread.join();
+    threads_.clear();
+  }
+
+  double
+  percent_complete() const {
+    unsigned const total     = destination_.width() * destination_.height();
+    unsigned const done      = current_job_index_ * job_size;
+
+    return double(done) / double(total);
+  }
+
+  bool
+  done() const {
+    return current_job_index_ == jobs_.size();
+  }
+
+  unsigned
+  concurrency() const { return num_threads_; }
+
+private:
+  static unsigned constexpr job_size = 1024;
+
+  using job = hdr_image::index;
+
+  unsigned                    num_threads_;
+  std::vector<std::thread>    threads_;
+  std::vector<job>            jobs_;
+  std::atomic<unsigned>       current_job_index_;
+  hdr_image&                  destination_;
+  scene const&                scene_;
+  camera const&               camera_;
+  shading_policy              shading_policy_;
+
+  bool
+  get_job(job& j) {
+    if (current_job_index_ < jobs_.size()) {
+      std::size_t const index = std::atomic_fetch_add(&current_job_index_, 1u);
+      if (index < jobs_.size()) {
+        j = jobs_[index];
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  void
+  worker() {
+    sampler_prng_engine prng;
+    double const pixel_width  = 1.0 / destination_.width();
+    double const pixel_height = 1.0 / destination_.height();
+
+    unsigned const total_size = destination_.width() * destination_.height();
+
+    while (true) {
+      job begin;
+      bool const have_job = get_job(begin);
+      if (!have_job)
+        break;  // And thus end the thread.
+
+      for (hdr_image::index index = begin;
+           index < begin + job_size && index < total_size;
+           ++index)
+      {
+        hdr_image::index const x = index % destination_.width();
+        hdr_image::index const y = index / destination_.width();
+
+        double const top_left_x = double(x) / double(destination_.width());
+        double const top_left_y = double(y) / double(destination_.height());
+
+        assert(0.0 <= top_left_x && top_left_x <= 1.0);
+        assert(0.0 <= top_left_y && top_left_y <= 1.0);
+
+        destination_.pixel_at(x, y) = sample(
+          scene_, camera_, {top_left_x, top_left_y, pixel_width, pixel_height},
+          shading_policy_, prng
+        );
+      }
+    }
+  }
+};
+
 int
 main(int argc, char** argv) try {
   namespace opts = boost::program_options;
@@ -96,6 +218,7 @@ main(int argc, char** argv) try {
   std::string filename;
   double gamma;
   unsigned supersampling;
+  unsigned threads;
 
   opts::options_description general{"General options"};
   general.add_options()
@@ -109,6 +232,10 @@ main(int argc, char** argv) try {
     ("output,o",
       opts::value<std::string>(&filename),
       "filename of the output")
+    ("threads",
+     opts::value<unsigned>(&threads)
+       ->default_value(std::thread::hardware_concurrency()),
+     "Number of threads to use for rendering")
     ;
 
   opts::options_description render{"Rendering options"};
@@ -189,8 +316,6 @@ main(int argc, char** argv) try {
     .translate({0.0, 4.0, 0.0})
     ;
   
-  monitor.change_phase("Tracing rays...");
-  
   hdr_image result{width, height};
   hdr_color const background{0.05, 0.05, 0.2};
 
@@ -199,24 +324,25 @@ main(int argc, char** argv) try {
   shading_pol.jitter = !values["no-jitter"].as<bool>();
   shading_pol.supersampling = supersampling;
 
-  double const pixel_width  = 1.0 / result.width();
-  double const pixel_height = 1.0 / result.height();
+  std::chrono::milliseconds const poll_interval{100};
 
-  unsigned total = width * height;
-  unsigned done  = 0;
-
-  for (hdr_image::index y = 0; y < result.height(); ++y)
-    for (hdr_image::index x = 0; x < result.width(); ++x) {
-      double const top_left_x = double(x) / double(result.width());
-      double const top_left_y = double(y) / double(result.height());
-      
-      result.pixel_at(x, y) = sample(
-        *sc, cam, {top_left_x, top_left_y, pixel_width, pixel_height},
-        shading_pol
-      );
-
-      monitor.update_progress((double) ++done / (double) total);
+  {
+    // Scope is necessary to make sure all threads are joined before moving
+    // on.
+    
+    renderer_pool pool{threads, result, *sc, cam, shading_pol};
+    monitor.change_phase(
+      std::string{"Tracing rays in "}
+      + std::to_string(pool.concurrency()) + " threads..."
+    );
+    pool.run();
+    while (!pool.done()) {
+      monitor.update_progress(pool.percent_complete());
+      std::this_thread::sleep_for(poll_interval);
     }
+
+    monitor.update_progress(pool.percent_complete());
+  }
 
   monitor.change_phase("Saving result image...");
 

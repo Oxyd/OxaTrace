@@ -57,7 +57,12 @@ public:
   cend() const noexcept     { return pixels_.end(); }
 
   // Get pixel at given coordinates.
-  // Coordinates must be within the bounds of the image.
+  //
+  // These functions are thread-safe provided all threads access different
+  // coordinates, or if multiple threads access the same pixel, the access is
+  // read-only.
+  //
+  // If index is out of bounds, the behaviour is undefined.
   pixel_type&
   pixel_at(index x, index y);
   pixel_type const&
@@ -156,10 +161,8 @@ basic_image<PixelT>::pixel_at(index x, index y) -> pixel_type& {
 template <typename PixelT>
 auto
 basic_image<PixelT>::pixel_at(index x, index y) const -> pixel_type const& {
-  if (x < width_ && x * y < pixels_.size())
-      return pixels_[y * width_ + x];
-  else
-    throw std::logic_error{"image::pixel_at: Invalid coordinates"};
+  assert(x < width_ && x * y < pixels_.size());
+  return pixels_[y * width_ + x];
 }
 
 } // namespace oxatrace

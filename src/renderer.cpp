@@ -301,7 +301,9 @@ namespace {
 static pixel_samples::sample&
 sample_one(scene const& scene, camera const& cam, rectangle pixel,
            shading_policy const& policy, unsigned weight,
-           pixel_samples& samples) {
+           pixel_samples& samples,
+           sampler_prng_engine& prng)
+{
   std::uniform_real_distribution<> x_jitter_distrib{0, pixel.width()};
   std::uniform_real_distribution<> y_jitter_distrib{0, pixel.height()};
 
@@ -323,7 +325,8 @@ sample_one(scene const& scene, camera const& cam, rectangle pixel,
 static void
 subpixel_sample(scene const& scene, camera const& cam,
                 shading_policy const& policy, subpixel_ref pixel,
-                pixel_samples& samples) {
+                pixel_samples& samples, sampler_prng_engine& prng)
+{
   unsigned const weight = pixel.side() * pixel.side();
   unsigned const weight_4 = weight / 4;
 
@@ -331,7 +334,7 @@ subpixel_sample(scene const& scene, camera const& cam,
     // No further subdivision of this subpixel.
     boost::optional<pixel_samples::sample&> sample = pixel.get_any();
     if (!sample)
-      sample_one(scene, cam, pixel.region(), policy, weight, samples);
+      sample_one(scene, cam, pixel.region(), policy, weight, samples, prng);
     else
       sample->weight = weight;
 
@@ -350,7 +353,7 @@ subpixel_sample(scene const& scene, camera const& cam,
 
     if (!sample)
       sample = sample_one(scene, cam, corner.region(), policy,
-                          weight_4, samples);
+                          weight_4, samples, prng);
     else
       sample->weight = weight_4;
     
@@ -372,15 +375,16 @@ subpixel_sample(scene const& scene, camera const& cam,
 
   if (dist > max_distance) {
     for (auto corner_index : subpixel_ref::corners)
-      subpixel_sample(scene, cam, policy, pixel.corner(corner_index), samples);
+      subpixel_sample(scene, cam, policy, pixel.corner(corner_index),
+                      samples, prng);
   } 
 }
 
 hdr_color
 oxatrace::sample(scene const& scene, camera const& cam, rectangle pixel,
-                 shading_policy const& policy) {
+                 shading_policy const& policy, sampler_prng_engine& prng) {
   pixel_samples samples{pixel, policy.supersampling};
-  subpixel_sample(scene, cam, policy, {samples}, samples);
+  subpixel_sample(scene, cam, policy, {samples}, samples, prng);
 
   assert(std::accumulate(samples.begin(), samples.end(), 0u,
                          [] (unsigned accum, pixel_samples::sample s) {

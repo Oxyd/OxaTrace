@@ -42,9 +42,6 @@ is_power2(unsigned n) {
   return n > 0 && (n & (n - 1)) == 0;
 }
 
-// Pseudo-random number generator engine to be used thoroughout the program.
-extern std::default_random_engine prng;
-
 // Unit-length vector.
 //
 // Conversion from a vector to unit will automatically divide the vector by its

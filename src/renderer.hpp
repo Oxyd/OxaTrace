@@ -4,6 +4,8 @@
 #include "color.hpp"
 #include "math.hpp"
 
+#include <random>
+
 namespace oxatrace {
 
 // Specifies how shading is to be carried out.
@@ -33,10 +35,12 @@ shade(scene const& scene, ray const& ray, shading_policy const& policy);
 
 class camera;
 
+using sampler_prng_engine = std::default_random_engine;
+
 // Sample a pixel of the image.
 hdr_color
 sample(scene const& scene, camera const& cam, rectangle pixel,
-       shading_policy const& policy);
+       shading_policy const& policy, sampler_prng_engine& prng);
 
 }
 

@@ -4,9 +4,6 @@
 
 using namespace oxatrace;
 
-std::default_random_engine
-oxatrace::prng;
-
 unit3
 oxatrace::get_any_orthogonal(unit3 const& v) {
   // If u is the solution, it holds that <v, u> = 0, or
