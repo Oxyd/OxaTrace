@@ -17,6 +17,77 @@
 
 using namespace oxatrace;
 
+scene_definition
+two_balls() {
+  scene_definition def;
+  auto sphere_shape = std::make_shared<oxatrace::sphere>();
+  auto plane_shape = std::make_shared<oxatrace::plane>();
+
+  auto plane_checker = std::make_shared<oxatrace::checkerboard>(
+    hdr_color{0.7, 0.7, 0.7}, hdr_color{0.8, 0.1, 0.1}
+  );
+  
+  hdr_color const sphere_color{0.4, 0.4, 0.6};
+  material const sphere_material{sphere_color, 0.4, 0.9, 50, 0.4};
+
+  auto sphere1 = make_unique<solid>(sphere_shape, sphere_material);
+  (*sphere1)
+    .scale(3.0)
+    .translate({0, 3, -15})
+    ;
+  def.add_solid(std::move(sphere1));
+
+  auto sphere2 = make_unique<solid>(sphere_shape, sphere_material);
+  (*sphere2)
+    .scale(3.0)
+    .translate({-8, 3, -15})
+    ;
+  def.add_solid(std::move(sphere2));
+
+  material const plane_material{hdr_color{0.5, 0.5, 0.5}, 0.5, 0.5, 200, 0.2};
+  auto plane = make_unique<solid>(plane_shape, plane_material, plane_checker);
+  (*plane)
+    .scale(3.0)
+    .rotate(Eigen::AngleAxisd{PI / 2., vector3::UnitX()})
+    ;
+  
+  def.add_solid(std::move(plane));
+
+  def.add_light(
+    make_unique<point_light>(vector3{-6.0, 10.0, 8.0},
+                             hdr_color{1.0, 1.0, 1.0})
+  );
+
+  return def;
+}
+
+scene_definition
+textured_ball() {
+  scene_definition def;
+  auto sphere_shape = std::make_shared<sphere>();
+  auto checker = std::make_shared<checkerboard>(
+    hdr_color{0.9, 0.9, 0.9}, hdr_color{0.1, 0.1, 0.9}, 8
+  );
+  material const sphere_mat{{0.0, 0.0, 0.0}, 0.6, 0.2, 20, 0.05};
+
+  auto sphere = make_unique<solid>(sphere_shape, sphere_mat, checker);
+  (*sphere)
+    .scale(3.0)
+    .translate({0, 3, -15})
+    ;
+
+  def.add_solid(std::move(sphere));
+
+  def.add_light(
+    make_unique<point_light>(
+      vector3{-6.0, 10.0, 8.0},
+      hdr_color{1.0, 1.0, 1.0}
+    )
+  );
+
+  return def;
+}
+
 int
 main(int argc, char** argv) try {
   namespace opts = boost::program_options;
@@ -108,46 +179,8 @@ main(int argc, char** argv) try {
   progress_monitor monitor;
   monitor.change_phase("Building scene...");
 
-  scene_definition def;
-  auto sphere_shape = std::make_shared<oxatrace::sphere>();
-  auto plane_shape = std::make_shared<oxatrace::plane>();
-
-  auto plane_checker = std::make_shared<oxatrace::checkerboard>(
-    hdr_color{0.7, 0.7, 0.7}, hdr_color{0.8, 0.1, 0.1}
-  );
-  
-  hdr_color const sphere_color{0.4, 0.4, 0.6};
-  material const sphere_material{sphere_color, 0.4, 0.9, 50, 0.4};
-
-  auto sphere1 = make_unique<solid>(sphere_shape, sphere_material);
-  (*sphere1)
-    .scale(3.0)
-    .translate({0, 3, -15})
-    ;
-  def.add_solid(std::move(sphere1));
-
-  auto sphere2 = make_unique<solid>(sphere_shape, sphere_material);
-  (*sphere2)
-    .scale(3.0)
-    .translate({-8, 3, -15})
-    ;
-  def.add_solid(std::move(sphere2));
-
-  material const plane_material{hdr_color{0.5, 0.5, 0.5}, 0.5, 0.5, 200, 0.2};
-  auto plane = make_unique<solid>(plane_shape, plane_material, plane_checker);
-  (*plane)
-    .scale(3.0)
-    .rotate(Eigen::AngleAxisd{PI / 2., vector3::UnitX()})
-    ;
-  
-  def.add_solid(std::move(plane));
-
-  def.add_light(
-    make_unique<point_light>(vector3{-6.0, 10.0, 8.0},
-                             hdr_color{1.0, 1.0, 1.0})
-  );
-
-  std::unique_ptr<scene> sc{simple_scene::make(std::move(def))};
+  auto scene_def = &two_balls;
+  std::unique_ptr<scene> sc{simple_scene::make(scene_def())};
 
   camera cam{double(width) / double(height), PI / 2.0};
   cam

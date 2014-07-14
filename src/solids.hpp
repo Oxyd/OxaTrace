@@ -92,22 +92,31 @@ public:
 //
 // It alternates two colours, here called a and b:
 //
-//   +-----------+
-//   |  a  |  b  |
-//   |-----+-----+
-//   |  b  |  a  |
-//   +-----------+
+//              num
+//   /-----------^-----------\                                                x
+//
+//   +-----------+-----+-----+  }
+//   |  a  |  b  |  a  |  b  |  |
+//   |-----+-----+-----+-----+  |
+//   |  b  |  a  |  b  |  a  |  |
+//   +-----------+-----+-----+  |> num
+//   |  a  |  b  |  a  |  b  |  |
+//   |-----+-----+-----+-----+  |
+//   |  b  |  a  |  b  |  a  |  |
+//   +-----------+-----+-----+  }
 //
 class checkerboard final : public texture {
 public:
-  // The pattern will use regions of colours a and b.
-  checkerboard(hdr_color a, hdr_color b);
+  // The pattern will use regions of colours a and b. num specifies the number
+  // of colour changes along each axis. num must not be 0.
+  checkerboard(hdr_color a, hdr_color b, unsigned num = 2);
 
   virtual hdr_color
   get(double u, double v) const override;
 
 private:
   hdr_color color_a, color_b;
+  double divisor_;
 };
 
 // Material defines the various visual qualities of a solid. It is responsible

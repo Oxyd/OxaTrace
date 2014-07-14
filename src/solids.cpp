@@ -98,7 +98,7 @@ sphere::texture_at(ray_point const& rp) const {
   //                pi
   
   unit3 const d = -normal_at(rp);
-  double const u = 0.5 + atan2(d.z(), d.x()) / 2 * PI;
+  double const u = 0.5 + atan2(d.z(), d.x()) / (2 * PI);
   double const v = 0.5 - asin(d.y()) / PI;
 
   assert(0.0 <= u && u <= 1.0);
@@ -157,14 +157,17 @@ plane::texture_at(ray_point const& rp) const {
   return {u, v};
 }
 
-checkerboard::checkerboard(hdr_color a, hdr_color b)
+checkerboard::checkerboard(hdr_color a, hdr_color b, unsigned num)
   : color_a{a}
   , color_b{b}
+  , divisor_{1.0 / num}
 { }
 
 hdr_color
 checkerboard::get(double u, double v) const {
-  return (u <= 0.5) != (v <= 0.5) ? color_b : color_a;
+  bool const a = (unsigned) (u / divisor_) % 2;
+  bool const b = (unsigned) (v / divisor_) % 2;
+  return a != b ? color_b : color_a;
 }
 
 material::material(hdr_color const& ambient, double diffuse, double specular,
