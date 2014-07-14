@@ -304,12 +304,12 @@ sample_one(scene const& scene, camera const& cam, rectangle pixel,
            pixel_samples& samples,
            sampler_prng_engine& prng)
 {
-  std::uniform_real_distribution<> x_jitter_distrib{0, pixel.width()};
-  std::uniform_real_distribution<> y_jitter_distrib{0, pixel.height()};
-
   double const x_mu = pixel.width() / 2;
   double const y_mu = pixel.height() / 2;
   
+  std::uniform_real_distribution<> x_jitter_distrib{0, pixel.width()};
+  std::uniform_real_distribution<> y_jitter_distrib{0, pixel.height()};
+
   vector2 const offset =
     policy.jitter
       ? vector2{x_jitter_distrib(prng), y_jitter_distrib(prng)}

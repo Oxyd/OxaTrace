@@ -107,11 +107,6 @@ public:
   {
     if (num_threads_ == 0)
       throw std::out_of_range{"renderer_pool: Can't do 0 threads"};
-    
-    hdr_image::index const total_pixels
-      = destination.width() * destination.height();
-    for (hdr_image::index i = 0; i < total_pixels; i += job_size)
-      jobs_.push_back(i);
   }
 
   renderer_pool(renderer_pool const&) = delete;
@@ -133,15 +128,18 @@ public:
 
   double
   percent_complete() const {
-    unsigned const total     = destination_.width() * destination_.height();
-    unsigned const done      = current_job_index_ * job_size;
+    unsigned const total = total_pixels();
+    unsigned const done  = current_job_index_ * job_size;
 
-    return double(done) / double(total);
+    if (done <= total)  // It may go over because threads.
+      return double(done) / double(total);
+    else
+      return 1.0;
   }
 
   bool
   done() const {
-    return current_job_index_ == jobs_.size();
+    return current_job_index_ * job_size >= total_pixels();
   }
 
   unsigned
@@ -154,19 +152,23 @@ private:
 
   unsigned                    num_threads_;
   std::vector<std::thread>    threads_;
-  std::vector<job>            jobs_;
   std::atomic<unsigned>       current_job_index_;
   hdr_image&                  destination_;
   scene const&                scene_;
   camera const&               camera_;
   shading_policy              shading_policy_;
 
+  hdr_image::index
+  total_pixels() const {
+    return destination_.width() * destination_.height();
+  }
+
   bool
   get_job(job& j) {
-    if (current_job_index_ < jobs_.size()) {
+    if (current_job_index_ * job_size < total_pixels()) {
       std::size_t const index = std::atomic_fetch_add(&current_job_index_, 1u);
-      if (index < jobs_.size()) {
-        j = jobs_[index];
+      if (index * job_size < total_pixels()) {
+        j = index * job_size;
         return true;
       }
     }
@@ -180,7 +182,7 @@ private:
     double const pixel_width  = 1.0 / destination_.width();
     double const pixel_height = 1.0 / destination_.height();
 
-    unsigned const total_size = destination_.width() * destination_.height();
+    unsigned const total_size = total_pixels();
 
     while (true) {
       job begin;

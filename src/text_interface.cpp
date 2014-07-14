@@ -21,6 +21,7 @@ progress_monitor::update_progress(double progress) {
   constexpr unsigned DIGITS = 3 + 1 + PRECISION;
   constexpr double LEAST_INCREMENT = (1.0 / (10.0 * PRECISION)) / 100.0;
 
+  assert(0.0 <= progress && progress <= 1.0);
   if (progress < 0.0 || progress > 1.0)
     throw std::invalid_argument{"progress_monitor: progress outside [0, 1]"};
 
