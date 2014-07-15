@@ -325,6 +325,7 @@ main(int argc, char** argv) try {
   shading_pol.background = background;
   shading_pol.jitter = !values["no-jitter"].as<bool>();
   shading_pol.supersampling = supersampling;
+  shading_pol.min_importance = 0.01;
 
   std::chrono::milliseconds const poll_interval{100};
 

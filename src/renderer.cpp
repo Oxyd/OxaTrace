@@ -140,8 +140,11 @@ namespace {
     };
     
     using sample_list = std::vector<sample>;
-    
+
+    pixel_samples();
     pixel_samples(rectangle pixel, unsigned side);
+
+    void reset(rectangle pixel, unsigned side);
     
     sample_list::reference  at(unsigned x, unsigned y);
     sample_list::value_type at(unsigned x, unsigned y) const;
@@ -192,12 +195,24 @@ namespace {
   };
 }
 
+pixel_samples::pixel_samples()
+  : side_{0}
+{ }
+
 pixel_samples::pixel_samples(rectangle pixel, unsigned supersampling)
-  : samples_(supersampling * supersampling)
-  , region_{pixel}
-  , side_{supersampling}
+  : pixel_samples()
 {
-  assert(is_power2(supersampling));
+  reset(pixel, supersampling);
+}
+
+void
+pixel_samples::reset(rectangle pixel, unsigned side) {
+  assert(is_power2(side));
+  
+  samples_.clear();
+  samples_.resize(side * side);
+  region_ = pixel;
+  side_ = side;
 }
 
 auto
@@ -306,13 +321,16 @@ sample_one(scene const& scene, camera const& cam, rectangle pixel,
 {
   double const x_mu = pixel.width() / 2;
   double const y_mu = pixel.height() / 2;
+
+  double const x_w = pixel.width() / 4;
+  double const y_w = pixel.height() / 4;
   
-  std::uniform_real_distribution<> x_jitter_distrib{0, pixel.width()};
-  std::uniform_real_distribution<> y_jitter_distrib{0, pixel.height()};
+  std::uniform_real_distribution<> x_jitter_distrib{-x_w, +x_w};
+  std::uniform_real_distribution<> y_jitter_distrib{-y_w, +y_w};
 
   vector2 const offset =
     policy.jitter
-      ? vector2{x_jitter_distrib(prng), y_jitter_distrib(prng)}
+      ? vector2{x_mu + x_jitter_distrib(prng), y_mu + y_jitter_distrib(prng)}
       : vector2{x_mu, y_mu}
       ;
   vector2 const point = pixel.top_left() + offset;
@@ -370,7 +388,7 @@ subpixel_sample(scene const& scene, camera const& cam,
 
   assert(pixel.total_weight() == weight);
 
-  double const max_distance = 0.001;
+  double const max_distance = 0.2;
   double const dist = distance(min, max);
 
   if (dist > max_distance) {
@@ -383,7 +401,8 @@ subpixel_sample(scene const& scene, camera const& cam,
 hdr_color
 oxatrace::sample(scene const& scene, camera const& cam, rectangle pixel,
                  shading_policy const& policy, sampler_prng_engine& prng) {
-  pixel_samples samples{pixel, policy.supersampling};
+  static thread_local pixel_samples samples;
+  samples.reset(pixel, policy.supersampling);
   subpixel_sample(scene, cam, policy, {samples}, samples, prng);
 
   assert(std::accumulate(samples.begin(), samples.end(), 0u,
