@@ -178,7 +178,8 @@ private:
 
   void
   worker() {
-    sampler_prng_engine prng;
+    std::hash<std::thread::id> hasher;
+    sampler_prng_engine prng{hasher(std::this_thread::get_id())};
     double const pixel_width  = 1.0 / destination_.width();
     double const pixel_height = 1.0 / destination_.height();
 
