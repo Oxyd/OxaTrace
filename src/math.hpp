@@ -13,6 +13,8 @@
 #include <utility>
 
 namespace oxatrace {
+  
+using random_eng = std::default_random_engine;
 
 constexpr double PI{3.141592};
 constexpr double EPSILON{1e-8};  // Minimal difference between numbers before
@@ -119,6 +121,14 @@ get_any_orthogonal(unit3 const& v);
 // surface.
 unit3
 reflect(unit3 const& v, unit3 const& normal);
+
+// Perturb a vector v by a random amount proportional to cosine lobe around v.
+//
+//             n + 1
+// PDF: p(t) = ----- * cos(t)^n = probability that angle(result, v) = t.
+//              2pi
+unit3
+cos_lobe_perturb(unit3 const& v, unsigned n, random_eng& prng);
 
 // A ray is defined by its origin and direction; it is immutable.
 //

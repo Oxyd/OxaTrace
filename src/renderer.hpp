@@ -25,17 +25,8 @@ struct shading_policy {
 };
 
 class scene;
-
-// Trace rays.
-//
-// Recursively traces rays through the given scene originating with the given
-// ray. The process stops then the policy tells it to stop.
-hdr_color
-shade(scene const& scene, ray const& ray, shading_policy const& policy);
-
 class camera;
-
-using sampler_prng_engine = std::default_random_engine;
+using sampler_prng_engine = random_eng;
 
 // Sample a pixel of the image.
 hdr_color

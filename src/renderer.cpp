@@ -14,7 +14,7 @@ static hdr_color
 blend_light(
   material const& material,
   hdr_color const& base_color, unit3 const& normal,
-  hdr_color const& light_color, unit3 const& light_dir
+  hdr_color const& light_color, vector3 const& light_dir
 ) {
   // We're using the Phong shading model here, which is an empiric one without
   // much basis in real physics. Aside from the ambient term (which is there
@@ -43,7 +43,7 @@ blend_light(
   hdr_color const specular_color =
     light_color * material.specular()
     * std::pow(cos_alpha, material.specular_exponent());
-
+    
   return base_color + diffuse_color + specular_color;
 }
 
@@ -66,7 +66,7 @@ should_continue(unsigned current_depth, double current_importance,
 
 static hdr_color
 do_shade(scene const& scene, ray const& ray, shading_policy const& policy,
-         unsigned depth, double importance)
+         unsigned depth, double importance, sampler_prng_engine& prng)
 {
   if (!should_continue(depth, importance, policy))
     return policy.background;
@@ -77,7 +77,7 @@ do_shade(scene const& scene, ray const& ray, shading_policy const& policy,
 
   hdr_color result = i->texture();
   for (light const& l : scene.lights()) {
-    unit3 const light_dir{l.get_source() - i->position()};
+    vector3 const light_dir{l.get_source() - i->position()};
 
     if (auto obstacle = scene.intersect_solid({i->position(), light_dir}))
       if ((obstacle->position() - i->position()).squaredNorm() <
@@ -89,21 +89,27 @@ do_shade(scene const& scene, ray const& ray, shading_policy const& policy,
     );
   }
 
-  unit3 reflection_dir = reflect(ray.direction(), i->normal());
-  oxatrace::ray reflected{i->position(), reflection_dir};
+  unit3 const perfect_reflection_dir = reflect(ray.direction(), i->normal());
+  unit3 const reflection_dir = cos_lobe_perturb(
+    perfect_reflection_dir,
+    i->solid().material().specular_exponent(),
+    prng
+  );
+  oxatrace::ray const reflected{i->position(), reflection_dir};
   double const reflection_importance = i->solid().material().reflectance();
   hdr_color const reflection = do_shade(
-    scene, reflected, policy, depth + 1, reflection_importance * importance
+    scene, reflected, policy, depth + 1, reflection_importance * importance,
+    prng
   );
   result = blend_reflection(i->solid().material(), result, reflection);
 
   return result;
 }
 
-hdr_color
-oxatrace::shade(scene const& scene, ray const& ray,
-                shading_policy const& policy) {
-  return do_shade(scene, ray, policy, 0, 1.0);
+static hdr_color
+shade(scene const& scene, ray const& ray,
+      shading_policy const& policy, sampler_prng_engine& prng) {
+  return do_shade(scene, ray, policy, 0, 1.0, prng);
 }
 
 // A subpixel is subdivided into four further subpixels, like so:
@@ -334,7 +340,7 @@ sample_one(scene const& scene, camera const& cam, rectangle pixel,
       : vector2{x_mu, y_mu}
       ;
   vector2 const point = pixel.top_left() + offset;
-  hdr_color const color = shade(scene, cam.make_ray(point), policy);
+  hdr_color const color = shade(scene, cam.make_ray(point), policy, prng);
 
   return samples.add(point, {color, weight});
 }

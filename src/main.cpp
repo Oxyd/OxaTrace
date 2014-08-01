@@ -34,7 +34,7 @@ two_balls() {
   );
   
   hdr_color const sphere_color{0.4, 0.4, 0.6};
-  material const sphere_material{sphere_color, 0.4, 0.9, 50, 0.4};
+  material const sphere_material{sphere_color, 0.4, 0.9, 200, 0.4};
 
   auto sphere1 = make_unique<solid>(sphere_shape, sphere_material);
   (*sphere1)
@@ -50,7 +50,7 @@ two_balls() {
     ;
   def.add_solid(std::move(sphere2));
 
-  material const plane_material{hdr_color{0.5, 0.5, 0.5}, 0.5, 0.5, 200, 0.2};
+  material const plane_material{hdr_color{0.5, 0.5, 0.5}, 0.5, 0.5, 1000, 0.2};
   auto plane = make_unique<solid>(plane_shape, plane_material, plane_checker);
   (*plane)
     .scale(3.0)

@@ -1,5 +1,6 @@
 #include "math.hpp"
 
+#include <cmath>
 #include <stdexcept>
 
 using namespace oxatrace;
@@ -39,6 +40,40 @@ oxatrace::get_any_orthogonal(unit3 const& v) {
 unit3
 oxatrace::reflect(unit3 const& v, unit3 const& normal) {
   return v - 2.0 * v.dot(normal) * normal;
+}
+
+unit3
+oxatrace::cos_lobe_perturb(unit3 const& z, unsigned n, random_eng& prng) {
+  // We'll use the formulas from Philip Dutré's Total Compendium[1] to generate
+  // a random vector on a hemisphere.
+  //
+  // Dutré's formula assumes the hemisphere is positioned in the origin, and 
+  // bulging upwards in the z direction. We'll need to transform the result
+  // so that the direction of the hemisphere is given by the input z vector.
+  //
+  // To do that, we'll estabilish a coordinate system, x, y, z; z being the 
+  // input parameter. x and y are then any two vectors so that x, y, z forms
+  // an orthonormal basis. 
+  // 
+  // [1] http://people.cs.kuleuven.be/~philip.dutre/GI/TotalCompendium.pdf
+  
+  // Our orthonormal basis.
+  unit3 const x = get_any_orthogonal(z);
+  unit3 const y = x.cross(z);
+  
+  std::uniform_real_distribution<> phi_distrib(0, 2 * PI);
+  std::uniform_real_distribution<> u_distrib;
+  
+  double const phi = phi_distrib(prng);
+  double const r   = u_distrib(prng);  // r_2 in [1].
+  
+  double const p = std::pow(r, 2.0 / (n + 1.0));
+  double const q = std::sqrt(1.0 - p);
+  
+  return 
+    x * std::cos(phi) * q
+    + y * std::sin(phi) * q
+    + z * std::pow(r, 1.0 / (n + 1.0));
 }
 
 std::ostream&
