@@ -2,3 +2,7 @@
 .directory
 *.ppm
 oxatrace.creator.user
+debug/
+profile/
+release/
+callgrind.out.*
