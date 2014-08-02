@@ -47,48 +47,48 @@ is_power2(unsigned n) {
 // Unit-length vector.
 //
 // Conversion from a vector to unit will automatically divide the vector by its
-// magnitude; conversion from unit to unit is a no-op.
+// magnitude.
 //
 // This is to help document the interface of various parts of the code and to
 // prevent bugs that stem from using non-unit length vectors where a unit-length
 // one is expected.
 template <typename MatrixT>
-class unit : public MatrixT {
+class unit {
   static_assert(MatrixT::IsVectorAtCompileTime,
                 "Only vectors can be unit-length.");
 
-  struct enabler { };
-
 public:
-  template <typename OtherMatrixT>
-  unit(unit<OtherMatrixT> const& other)
-    : MatrixT{other} { }
+  struct assume_norm { };
 
   unit(unit const&) = default;
 
-  // Forwarding constructor.
-  template <typename... Elems>
-  unit(Elems... elems);
+  template <typename OtherMatrixT>
+  unit(Eigen::MatrixBase<OtherMatrixT> const& other)
+    : vector_{other.normalized()} { }
 
-  // These override (in a sense of static polymorphism) functions from MatrixT.
+  template <typename OtherMatrixT>
+  unit(assume_norm, Eigen::MatrixBase<OtherMatrixT> const& other)
+    : vector_{other} {
+    assert(double_eq(vector_.norm(), 1.0));
+  }
 
-  decltype(std::declval<MatrixT>().norm())
-  norm() { return 1.0; }
+  //template <typename T>
+  //unit(T x) : unit(MatrixT{x}) { }
 
-  decltype(std::declval<MatrixT>().squaredNorm())
-  squaredNorm() { return 1.0; }
+  template <typename T>
+  unit(T x, T y) : unit(MatrixT{x, y}) { }
+
+  template <typename T>
+  unit(T x, T y, T z) : unit(MatrixT{x, y, z}) { }
+
+  template <typename T>
+  unit(T x, T y, T z, T w) : unit(MatrixT{x, y, z, w}) { }
+
+  MatrixT get() const       { return vector_; }
+  operator MatrixT () const { return vector_; }
 
 private:
-  // Return a vector parallel to v and with the same orientation, but with
-  // unit length.
-  //
-  // v must be nonzero.
-  MatrixT
-  normalized(MatrixT const& v) {
-    double const norm_2{v.squaredNorm()};
-    assert(double_neq(norm_2, 0.0));
-    return v / std::sqrt(norm_2);
-  }
+  MatrixT vector_;
 };
 
 using vector3 = Eigen::Vector3d;
@@ -97,21 +97,33 @@ using unit3   = unit<vector3>;
 using unit2   = unit<vector2>;
 
 // Get the cosine of the directed angle from v to u.
-template <
-  typename Base1, typename Base2,
-  typename = typename std::enable_if<
-    Eigen::MatrixBase<Base1>::IsVectorAtCompileTime &&
-    Eigen::MatrixBase<Base2>::IsVectorAtCompileTime &&
-    static_cast<std::size_t>(Eigen::MatrixBase<Base1>::SizeAtCompileTime) ==
-      static_cast<std::size_t>(Eigen::MatrixBase<Base2>::SizeAtCompileTime)
-  >::type
->
+template <typename Base1, typename Base2>
 auto
-cos_angle(
-  Eigen::MatrixBase<Base1> const& v,
-  Eigen::MatrixBase<Base2> const& u
-) -> decltype(u.dot(v)) 
-{ return (u.dot(v)) / (u.norm() * v.norm()); }
+cos_angle(Eigen::MatrixBase<Base1> const& v,
+          Eigen::MatrixBase<Base2> const& u) -> decltype(u.dot(v)) {
+  return (u.dot(v)) / (u.norm() * v.norm());
+}
+
+template <typename Base, typename Unit>
+auto
+cos_angle(Eigen::MatrixBase<Base> const& u,
+          unit<Unit> const& v) -> decltype(u.dot(v.get())) {
+  return u.dot(v.get()) / u.norm();
+}
+
+template <typename Base, typename Unit>
+auto
+cos_angle(unit<Unit> const& u,
+          Eigen::MatrixBase<Base> const& v) -> decltype(u.get().dot(v)) {
+  return u.get().dot(v) / v.norm();
+}
+
+template <typename Unit1, typename Unit2>
+auto
+cos_angle(unit<Unit1> const& u, unit<Unit2> const& v)
+  -> decltype(u.get().dot(v.get())) {
+  return u.get().dot(v.get());
+}
 
 // Get any vector perpendicular to the given one.
 unit3
@@ -189,13 +201,6 @@ private:
   double        param_;
   mutable boost::optional<vector3> point_;
 };
-
-// Unit implementation...
-
-template <typename MatrixT>
-template <typename... Elems>
-unit<MatrixT>::unit(Elems... elems)
-  : MatrixT{normalized({std::forward<Elems>(elems)...})} {}
 
 // Two-dimensional rectangle in an unspecified space.
 //

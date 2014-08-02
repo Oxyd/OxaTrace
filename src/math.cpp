@@ -6,7 +6,7 @@
 using namespace oxatrace;
 
 unit3
-oxatrace::get_any_orthogonal(unit3 const& v) {
+oxatrace::get_any_orthogonal(unit3 const& input) {
   // If u is the solution, it holds that <v, u> = 0, or
   // 
   //                v_x u_x + v_y u_y + v_z u_z = 0.
@@ -25,6 +25,8 @@ oxatrace::get_any_orthogonal(unit3 const& v) {
   // value) component of v, fix the other components of u and solve for the
   // remaining one.
 
+  vector3 const v = input.get();
+
   double const x = std::abs(v.x());
   double const y = std::abs(v.y());
   double const z = std::abs(v.z());
@@ -39,11 +41,11 @@ oxatrace::get_any_orthogonal(unit3 const& v) {
 
 unit3
 oxatrace::reflect(unit3 const& v, unit3 const& normal) {
-  return v - 2.0 * v.dot(normal) * normal;
+  return v.get() - 2.0 * v.get().dot(normal.get()) * normal.get();
 }
 
 unit3
-oxatrace::cos_lobe_perturb(unit3 const& z, unsigned n, random_eng& prng) {
+oxatrace::cos_lobe_perturb(unit3 const& v, unsigned n, random_eng& prng) {
   // We'll use the formulas from Philip Dutré's Total Compendium[1] to generate
   // a random vector on a hemisphere.
   //
@@ -58,8 +60,9 @@ oxatrace::cos_lobe_perturb(unit3 const& z, unsigned n, random_eng& prng) {
   // [1] http://people.cs.kuleuven.be/~philip.dutre/GI/TotalCompendium.pdf
   
   // Our orthonormal basis.
-  unit3 const x = get_any_orthogonal(z);
-  unit3 const y = x.cross(z);
+  vector3 const z = v.get();
+  vector3 const x = get_any_orthogonal(z);
+  vector3 const y = x.cross(z);
   
   std::uniform_real_distribution<> phi_distrib(0, 2 * PI);
   std::uniform_real_distribution<> u_distrib;

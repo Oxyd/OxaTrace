@@ -97,7 +97,7 @@ sphere::texture_at(ray_point const& rp) const {
   //   v = 0.5 - ---------
   //                pi
   
-  unit3 const d = -normal_at(rp);
+  vector3 const d = -normal_at(rp).get();
   double const u = 0.5 + atan2(d.z(), d.x()) / (2 * PI);
   double const v = 0.5 - asin(d.y()) / PI;
 
