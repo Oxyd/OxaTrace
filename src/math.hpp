@@ -72,9 +72,6 @@ public:
     assert(double_eq(vector_.norm(), 1.0));
   }
 
-  //template <typename T>
-  //unit(T x) : unit(MatrixT{x}) { }
-
   template <typename T>
   unit(T x, T y) : unit(MatrixT{x, y}) { }
 

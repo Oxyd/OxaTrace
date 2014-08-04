@@ -73,10 +73,10 @@ oxatrace::cos_lobe_perturb(unit3 const& v, unsigned n, random_eng& prng) {
   double const p = std::pow(r, 2.0 / (n + 1.0));
   double const q = std::sqrt(1.0 - p);
   
-  return 
-    x * std::cos(phi) * q
-    + y * std::sin(phi) * q
-    + z * std::pow(r, 1.0 / (n + 1.0));
+  return unit3{unit3::assume_norm{},
+               x * std::cos(phi) * q
+                 + y * std::sin(phi) * q
+                 + z * std::pow(r, 1.0 / (n + 1.0))};
 }
 
 std::ostream&
