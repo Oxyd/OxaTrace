@@ -90,7 +90,7 @@ template <typename ChannelT>
 basic_color<ChannelT>::basic_color(
   ChannelT r, ChannelT g, ChannelT b
 ) noexcept
-  : channels_{r, g, b}
+  : channels_{{r, g, b}}
 { }
 
 #define impl_op(op)                                                            \

@@ -29,7 +29,6 @@ oxatrace::ldr_from_hdr(hdr_image const& hdr) {
   using ldr_pixel   = ldr_image::pixel_type;
   using hdr_pixel   = hdr_image::pixel_type;
   using ldr_channel = ldr_pixel::channel;
-  using hdr_channel = hdr_pixel::channel;
   ldr_channel const out_max = std::numeric_limits<ldr_channel>::max();
 
   ldr_image result{hdr.width(), hdr.height()};

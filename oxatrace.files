@@ -19,3 +19,4 @@ src/text_interface.cpp
 src/text_interface.hpp
 src/util.hpp
 .gitignore
+Makefile

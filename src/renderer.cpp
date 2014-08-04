@@ -176,9 +176,9 @@ namespace {
     static unsigned constexpr top_right    = 1;
     static unsigned constexpr bottom_left  = 2;
     static unsigned constexpr bottom_right = 3;
-    static std::array<unsigned, 4> constexpr corners{
+    static std::array<unsigned, 4> constexpr corners{{
       top_left, top_right, bottom_left, bottom_right
-    };
+    }};
 
     subpixel_ref(pixel_samples& samples);
     subpixel_ref(pixel_samples& samples,
