@@ -16,6 +16,7 @@ libraries = m boost_program_options
 
 # -Wno-unused-local-typedefs silences warnings from Eigen.
 CXXFLAGS = -Wall -Wextra -std=c++11 -pedantic \
+           -Wno-unused-local-typedefs \
            -msse4.2 \
            $(foreach path,$(include_paths),-I$(path))
 
