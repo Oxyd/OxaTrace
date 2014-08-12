@@ -15,7 +15,7 @@ include_paths = /usr/include/eigen3
 libraries = m boost_program_options
 
 # -Wno-unused-local-typedefs silences warnings from Eigen.
-CXXFLAGS = -Wall -Wextra -std=c++11 -pedantic \
+CXXFLAGS = -Wall -Wextra -std=c++1y -pedantic \
            -Wno-unused-local-typedefs \
            -msse4.2 \
            $(foreach path,$(include_paths),-I$(path))

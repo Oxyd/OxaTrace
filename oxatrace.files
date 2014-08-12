@@ -17,6 +17,5 @@ src/solids.cpp
 src/solids.hpp
 src/text_interface.cpp
 src/text_interface.hpp
-src/util.hpp
 .gitignore
 Makefile

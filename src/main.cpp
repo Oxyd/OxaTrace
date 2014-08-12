@@ -36,14 +36,14 @@ two_balls() {
   hdr_color const sphere_color{0.4, 0.4, 0.6};
   material const sphere_material{sphere_color, 0.4, 0.9, 200, 0.4};
 
-  auto sphere1 = make_unique<solid>(sphere_shape, sphere_material);
+  auto sphere1 = std::make_unique<solid>(sphere_shape, sphere_material);
   (*sphere1)
     .scale(3.0)
     .translate({0, 3, -15})
     ;
   def.add_solid(std::move(sphere1));
 
-  auto sphere2 = make_unique<solid>(sphere_shape, sphere_material);
+  auto sphere2 = std::make_unique<solid>(sphere_shape, sphere_material);
   (*sphere2)
     .scale(3.0)
     .translate({-8, 3, -15})
@@ -51,7 +51,7 @@ two_balls() {
   def.add_solid(std::move(sphere2));
 
   material const plane_material{hdr_color{0.5, 0.5, 0.5}, 0.5, 0.5, 1000, 0.2};
-  auto plane = make_unique<solid>(plane_shape, plane_material, plane_checker);
+  auto plane = std::make_unique<solid>(plane_shape, plane_material, plane_checker);
   (*plane)
     .scale(3.0)
     .rotate(Eigen::AngleAxisd{PI / 2., vector3::UnitX()})
@@ -60,8 +60,8 @@ two_balls() {
   def.add_solid(std::move(plane));
 
   def.add_light(
-    make_unique<point_light>(vector3{-6.0, 10.0, 8.0},
-                             hdr_color{1.0, 1.0, 1.0})
+    std::make_unique<point_light>(vector3{-6.0, 10.0, 8.0},
+                                  hdr_color{1.0, 1.0, 1.0})
   );
 
   return def;
@@ -76,7 +76,7 @@ textured_ball() {
   );
   material const sphere_mat{{0.0, 0.0, 0.0}, 0.6, 0.2, 20, 0.05};
 
-  auto sphere = make_unique<solid>(sphere_shape, sphere_mat, checker);
+  auto sphere = std::make_unique<solid>(sphere_shape, sphere_mat, checker);
   (*sphere)
     .scale(3.0)
     .translate({0, 3, -15})
