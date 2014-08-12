@@ -1,5 +1,4 @@
 #include "scene.hpp"
-#include "util.hpp"
 
 #include <algorithm>
 #include <limits>

@@ -4,7 +4,6 @@
 #include "scene.hpp"
 #include "renderer.hpp"
 #include "text_interface.hpp"
-#include "util.hpp"
 
 #include <boost/program_options.hpp>
 
@@ -14,6 +13,7 @@
 #include <cstddef>
 #include <functional>
 #include <iostream>
+#include <memory>
 #include <mutex>
 #include <stdexcept>
 #include <string>
@@ -85,7 +85,7 @@ textured_ball() {
   def.add_solid(std::move(sphere));
 
   def.add_light(
-    make_unique<point_light>(
+    std::make_unique<point_light>(
       vector3{-6.0, 10.0, 8.0},
       hdr_color{1.0, 1.0, 1.0}
     )
